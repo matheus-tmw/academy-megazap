@@ -1,0 +1,12 @@
+{
+  "projectId": "megazap-academy-prod",
+  "appId": "1:520759429294:web:b3884fd67aab4a6976853f",
+  "apiKey": "AIzaSyCJMhegSh5Ve7tcm6MuFYj-_j1qWVr1vUg",
+  "authDomain": "megazap-academy-prod.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "megazap-academy-prod.firebasestorage.app",
+  "messagingSenderId": "520759429294",
+  "measurementId": "",
+  "oAuthClientId": "",
+  "recaptchaSiteKey": ""
+}

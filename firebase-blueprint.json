@@ -1,0 +1,414 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Training category grouping courses by subject area.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Category display name"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Category description"
+        },
+        "icon": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Lucide icon name"
+        },
+        "color": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Tailwind color theme name"
+        },
+        "order": {
+          "type": "number",
+          "description": "Display order index"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["published", "draft", "archived"],
+          "description": "Category visibility status"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["name", "icon", "color", "order", "status", "createdAt", "updatedAt"]
+    },
+    "Partner": {
+      "title": "Partner",
+      "description": "White Label partner agency / reseller registered in MegaZap Academy.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Internal name of the partner agency"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Display name shown in UI and certificates"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 30,
+          "pattern": "^[A-Z0-9_-]+$",
+          "description": "Unique uppercase identifying partner code (e.g. ULTRAFOX)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "suspended"],
+          "description": "Operational status of the partner"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "UID of the admin who created this partner"
+        }
+      },
+      "required": ["name", "displayName", "code", "status", "createdAt", "updatedAt", "createdBy"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile associated with Firebase Auth UID and partner tenancy.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Firebase Auth unique user identifier"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Full name of the user"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "User corporate or personal email address"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["super_admin", "partner_admin", "partner_user"],
+          "description": "RBAC permission role level"
+        },
+        "partnerId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Reference to partners/{partnerId}. Can be null or 'mega_zap_hq' for super_admin."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "blocked"],
+          "description": "User access status"
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "User profile avatar image URL"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account registration timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last profile update timestamp"
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last successful login timestamp"
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "UID of creator"
+        },
+        "updatedBy": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "UID of updater"
+        }
+      },
+      "required": ["uid", "name", "email", "role", "status", "createdAt", "updatedAt"]
+    },
+    "Progress": {
+      "title": "Progress",
+      "description": "Lesson-level progress tracking record for a user.",
+      "type": "object",
+      "properties": {
+        "lessonId": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Identifier of the lesson"
+        },
+        "courseId": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Identifier of the track / course"
+        },
+        "moduleId": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Identifier of the module"
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether the user finished this lesson"
+        },
+        "progressPercent": {
+          "type": "number",
+          "description": "Watched video percentage between 0 and 100"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the lesson was first opened"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the lesson was fully marked as completed"
+        },
+        "lastWatchedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of most recent playback interaction"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["lessonId", "courseId", "moduleId", "completed", "progressPercent", "startedAt", "lastWatchedAt", "updatedAt"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "Saved lesson bookmark for quick user reference.",
+      "type": "object",
+      "properties": {
+        "lessonId": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Identifier of the favorited lesson"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the lesson was favorited"
+        }
+      },
+      "required": ["lessonId", "createdAt"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Official training track available in MegaZap Academy.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 150,
+          "description": "Course / Track title"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Comprehensive course description"
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Category (Primeiros Passos, Atendimento, Automação, etc.)"
+        },
+        "thumbnail": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Cover thumbnail image URL"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["published", "draft", "archived"],
+          "description": "Publishing status"
+        },
+        "order": {
+          "type": "number",
+          "description": "Display order index"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["title", "description", "category", "status", "order", "createdAt", "updatedAt"]
+    },
+    "Certificate": {
+      "title": "Certificate",
+      "description": "Official track completion credential issued to a partner employee.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "UID of the student"
+        },
+        "partnerId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Partner ID to which the student belongs"
+        },
+        "courseId": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Course / Track identifier"
+        },
+        "courseTitle": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Official title of the completed track"
+        },
+        "issuedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Issuance timestamp"
+        },
+        "certificateNumber": {
+          "type": "string",
+          "maxLength": 50,
+          "pattern": "^[A-Z0-9_-]+$",
+          "description": "Unique verification code (e.g. MZ-WL-XXXXXXX)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["valid", "revoked"],
+          "description": "Validity status"
+        }
+      },
+      "required": ["userId", "partnerId", "courseId", "courseTitle", "issuedAt", "certificateNumber", "status"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable security and administrative event trail.",
+      "type": "object",
+      "properties": {
+        "actorUid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "UID of the user or admin performing the action"
+        },
+        "actorRole": {
+          "type": "string",
+          "enum": ["super_admin", "partner_admin", "partner_user", "system"],
+          "description": "Role of the actor at time of action"
+        },
+        "partnerId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Partner context if applicable"
+        },
+        "action": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Action name (e.g. USER_CREATED, USER_UPDATED, ROLE_CHANGED)"
+        },
+        "targetType": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Type of resource modified (user, partner, certificate, etc.)"
+        },
+        "targetId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "ID of resource modified"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Safe descriptive context metadata (never includes passwords or secrets)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of event creation"
+        }
+      },
+      "required": ["actorUid", "actorRole", "action", "targetType", "targetId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Stores organizational content categories with icons and color themes."
+    },
+    "/partners/{partnerId}": {
+      "schema": "Partner",
+      "description": "Stores White Label partner company accounts and licensing metadata."
+    },
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "Stores individual user profile, role hierarchy, and partner tenancy."
+    },
+    "/users/{uid}/progress/{lessonId}": {
+      "schema": "Progress",
+      "description": "Stores per-lesson viewing and completion status for a specific user."
+    },
+    "/users/{uid}/favorites/{lessonId}": {
+      "schema": "Favorite",
+      "description": "Stores bookmarked lessons saved by the user."
+    },
+    "/courses/{courseId}": {
+      "schema": "Course",
+      "description": "Stores master course and track catalog definitions."
+    },
+    "/certificates/{certificateId}": {
+      "schema": "Certificate",
+      "description": "Stores certified graduation credentials for verification."
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Stores immutable audit trail of administrative and security events."
+    },
+    "/admins/{uid}": {
+      "schema": "User",
+      "description": "Trusted root super_admin role lookup for Zero-Trust Firestore Security Rules."
+    }
+  }
+}
