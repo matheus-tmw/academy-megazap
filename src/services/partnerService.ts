@@ -70,7 +70,12 @@ export async function getPartner(partnerId: string): Promise<Partner | null> {
     }
     return null;
   } catch (error) {
+    if (!auth.currentUser) {
+      console.info('getPartner unauthenticated notice (using fallback)');
+      return null;
+    }
     handleFirestoreError(error, OperationType.GET, `partners/${partnerId}`);
+    return null;
   }
 }
 
@@ -85,7 +90,12 @@ export async function getPartnerByCode(code: string): Promise<Partner | null> {
     }
     return null;
   } catch (error) {
+    if (!auth.currentUser) {
+      console.info('getPartnerByCode unauthenticated notice');
+      return null;
+    }
     handleFirestoreError(error, OperationType.LIST, path);
+    return null;
   }
 }
 
@@ -96,7 +106,12 @@ export async function listPartners(): Promise<Partner[]> {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Partner));
   } catch (error) {
+    if (!auth.currentUser) {
+      console.info('listPartners unauthenticated notice (waiting for auth)');
+      return [];
+    }
     handleFirestoreError(error, OperationType.LIST, path);
+    return [];
   }
 }
 

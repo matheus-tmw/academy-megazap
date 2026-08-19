@@ -236,7 +236,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavigationTab>('login');
   const [selectedTrackId, setSelectedTrackId] = useState<string>('atendimento');
   const [selectedLessonId, setSelectedLessonId] = useState<string>('aula-at-05');
   
@@ -252,16 +252,9 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [realUserProfile, setRealUserProfile] = useState<UserProfile | null>(null);
-  const [activeRole, setActiveRole] = useState<UserRole>(() => {
-    try {
-      const savedRole = localStorage.getItem(STORAGE_KEYS.DEMO_ROLE);
-      return (savedRole as UserRole) || 'super_admin';
-    } catch {
-      return 'super_admin';
-    }
-  });
+  const [activeRole, setActiveRole] = useState<UserRole>('partner_user');
 
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => DEMO_PROFILES[activeRole]);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [currentPartner, setCurrentPartner] = useState<Partner | null>(null);
   const [allPartners, setAllPartners] = useState<Partner[]>([]);
 
@@ -511,9 +504,9 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
         }
       } else {
         setRealUserProfile(null);
-        const savedRole = (localStorage.getItem(STORAGE_KEYS.DEMO_ROLE) as UserRole) || 'super_admin';
-        setActiveRole(savedRole);
-        setCurrentUser(DEMO_PROFILES[savedRole]);
+        setActiveRole('partner_user');
+        setCurrentUser(null);
+        setActiveTab('login');
       }
       setAuthLoading(false);
     });
@@ -700,8 +693,8 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
     await logout();
     setRealUserProfile(null);
     localStorage.removeItem(STORAGE_KEYS.DEMO_ROLE);
-    setActiveRole('super_admin');
-    setCurrentUser(DEMO_PROFILES.super_admin);
+    setActiveRole('partner_user');
+    setCurrentUser(null);
     setActiveTab('login');
   };
 
