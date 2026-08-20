@@ -10,19 +10,21 @@ import {
   CheckCircle2, 
   X, 
   Building2, 
-  Filter,
-  Mail,
-  UserCheck,
-  UserX,
-  Sparkles,
-  Trash2,
-  AlertCircle
+  Filter, 
+  Mail, 
+  UserCheck, 
+  UserX, 
+  Sparkles, 
+  Trash2, 
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { 
   getAllUsers, 
+  listenToAllUsers,
   createAdministrativeUser, 
   updateUserAdministrative, 
-  deleteUserAdministrative,
+  deleteUserAdministrative, 
   setUserStatus, 
   requestUserPasswordReset 
 } from '../../services/userService';
@@ -36,6 +38,7 @@ export const AdminUsersView: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -67,8 +70,8 @@ export const AdminUsersView: React.FC = () => {
     setTimeout(() => setFeedbackMsg(null), 4000);
   };
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (showToast = false) => {
+    setIsSyncing(true);
     try {
       const [uData, pData] = await Promise.all([getAllUsers(), listPartners()]);
       if (uData) setUsers(uData);
@@ -78,14 +81,29 @@ export const AdminUsersView: React.FC = () => {
           setFormPartnerId(pData[0].id);
         }
       }
+      if (showToast) {
+        showFeedback(`Banco de dados sincronizado com sucesso (${uData?.length || 0} usuários encontrados).`);
+      }
     } catch (err) {
       console.warn('Users load notice:', err);
     }
     setLoading(false);
+    setIsSyncing(false);
   };
 
   useEffect(() => {
     loadData();
+    // Real-time Firestore sync listener
+    const unsubscribeUsers = listenToAllUsers((realtimeUsers) => {
+      if (realtimeUsers) {
+        setUsers(realtimeUsers);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      unsubscribeUsers();
+    };
   }, []);
 
   const openCreateModal = () => {
@@ -222,13 +240,25 @@ export const AdminUsersView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors shrink-0 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Cadastrar Novo Usuário</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => loadData(true)}
+            disabled={isSyncing}
+            className="py-2.5 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs flex items-center justify-center gap-2 transition-colors shrink-0 cursor-pointer disabled:opacity-50"
+            title="Recarregar e sincronizar usuários diretamente do banco Firestore"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-sky-500 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar Banco'}</span>
+          </button>
+
+          <button
+            onClick={openCreateModal}
+            className="py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Cadastrar Novo Usuário</span>
+          </button>
+        </div>
       </div>
 
       {/* Feedback Toast */}

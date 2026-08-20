@@ -5,9 +5,9 @@ import {
   getDocs, 
   setDoc, 
   updateDoc, 
+  onSnapshot,
   query, 
   where, 
-  orderBy,
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
@@ -99,12 +99,50 @@ export async function getPartnerByCode(code: string): Promise<Partner | null> {
   }
 }
 
+/**
+ * Real-time listener for partners collection
+ */
+export function listenToPartners(
+  onUpdate: (partners: Partner[]) => void,
+  onError?: (error: any) => void
+): () => void {
+  const collRef = collection(db, 'partners');
+  return onSnapshot(collRef, (snapshot) => {
+    try {
+      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Partner));
+      list.sort((a, b) => {
+        const timeA = a.updatedAt || a.createdAt || '';
+        const timeB = b.updatedAt || b.createdAt || '';
+        if (timeA && timeB) {
+          return String(timeB).localeCompare(String(timeA));
+        }
+        return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '');
+      });
+      onUpdate(list);
+    } catch (err) {
+      console.warn('Real-time partners processing error:', err);
+      if (onError) onError(err);
+    }
+  }, (error) => {
+    console.warn('Real-time partners listener error:', error);
+    if (onError) onError(error);
+  });
+}
+
 export async function listPartners(): Promise<Partner[]> {
   const path = 'partners';
   try {
-    const q = query(collection(db, path), orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Partner));
+    const snapshot = await getDocs(collection(db, path));
+    const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Partner));
+    list.sort((a, b) => {
+      const timeA = a.updatedAt || a.createdAt || '';
+      const timeB = b.updatedAt || b.createdAt || '';
+      if (timeA && timeB) {
+        return String(timeB).localeCompare(String(timeA));
+      }
+      return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '');
+    });
+    return list;
   } catch (error) {
     if (!auth.currentUser) {
       console.info('listPartners unauthenticated notice (waiting for auth)');

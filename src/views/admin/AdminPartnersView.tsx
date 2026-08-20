@@ -14,9 +14,10 @@ import {
   Shield, 
   Sparkles,
   Layers,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from 'lucide-react';
-import { listPartners, createPartner, updatePartner, updatePartnerStatus } from '../../services/partnerService';
+import { listPartners, listenToPartners, createPartner, updatePartner, updatePartnerStatus } from '../../services/partnerService';
 import { getUsersByPartner } from '../../services/userService';
 import { Partner, PartnerStatus, UserProfile } from '../../types/backend';
 
@@ -24,6 +25,7 @@ export const AdminPartnersView: React.FC = () => {
   const { navigateTo } = useAcademy();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
@@ -43,20 +45,29 @@ export const AdminPartnersView: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
 
   const fetchPartners = async () => {
-    setLoading(true);
+    setSyncing(true);
     try {
       const data = await listPartners();
-      if (data && data.length > 0) {
-        setPartners(data);
-      }
+      setPartners(data);
     } catch (err) {
       console.warn('Partners fetch notice:', err);
+    } finally {
+      setSyncing(false);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    fetchPartners();
+    // Real-time listener for partners collection
+    const unsubscribe = listenToPartners((data) => {
+      setPartners(data);
+      setLoading(false);
+    }, (err) => {
+      console.warn('Partners live subscription fallback:', err);
+      fetchPartners();
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const openCreateModal = () => {
@@ -168,13 +179,25 @@ export const AdminPartnersView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Cadastrar Novo Parceiro</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchPartners}
+            disabled={syncing || loading}
+            title="Sincronizar com Firestore em tempo real"
+            className="py-2.5 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-sky-500 ${syncing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Sincronizar</span>
+          </button>
+
+          <button
+            onClick={openCreateModal}
+            className="py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Cadastrar Novo Parceiro</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters Bar */}

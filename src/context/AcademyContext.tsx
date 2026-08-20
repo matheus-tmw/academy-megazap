@@ -471,16 +471,12 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
 
             setActiveTab(prev => (prev === 'login' ? (effectiveRole === 'super_admin' ? 'admin-dashboard' : effectiveRole === 'partner_admin' ? 'partner-dashboard' : 'dashboard') : prev));
           } else {
-            // Fallback for new user with role auto-detection
-            const emailLower = (firebaseUser.email || '').toLowerCase();
-            const isSuperAdminEmail = 
-              emailLower.includes('matheus') || 
-              emailLower.includes('admin') || 
-              emailLower.includes('.adm') || 
-              emailLower === 'matheus.tmw@gmail.com';
+            // Fallback for new user with exact role detection
+            const emailLower = (firebaseUser.email || '').toLowerCase().trim();
+            const isMasterSuperAdmin = emailLower === 'matheus.tmw@gmail.com';
 
-            const role: UserRole = isSuperAdminEmail ? 'super_admin' : 'partner_user';
-            const partnerId = isSuperAdminEmail ? null : 'partner_ultrafox';
+            const role: UserRole = isMasterSuperAdmin ? 'super_admin' : 'partner_user';
+            const partnerId = isMasterSuperAdmin ? null : 'partner_ultrafox';
 
             const fallbackProfile: UserProfile = {
               uid: firebaseUser.uid,
@@ -610,7 +606,7 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
     setAuthError(null);
     setAuthLoading(true);
     try {
-      const isSuper = email.toLowerCase().includes('matheus') || email.toLowerCase().includes('admin') || email === 'matheus.tmw@gmail.com';
+      const isSuper = email.toLowerCase().trim() === 'matheus.tmw@gmail.com';
       const role: UserRole = isSuper ? 'super_admin' : 'partner_user';
       const partnerId = isSuper ? null : 'partner_ultrafox';
 

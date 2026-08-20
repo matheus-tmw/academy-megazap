@@ -13,9 +13,16 @@ import {
   Sparkles, 
   GraduationCap,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
-import { getUsersByPartner, createAdministrativeUser, setUserStatus, requestUserPasswordReset } from '../../services/userService';
+import { 
+  getUsersByPartner, 
+  listenToPartnerUsers,
+  createAdministrativeUser, 
+  setUserStatus, 
+  requestUserPasswordReset 
+} from '../../services/userService';
 import { UserProfile, UserStatus } from '../../types/backend';
 import { formatDisplayIdentifier } from '../../utils/userIdentifiers';
 import { PasswordResetModal } from '../../components/PasswordResetModal';
@@ -24,6 +31,7 @@ export const PartnerTeamView: React.FC = () => {
   const { currentPartner, currentUser } = useAcademy();
   const [members, setMembers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [search, setSearch] = useState('');
 
   // Modals
@@ -42,9 +50,9 @@ export const PartnerTeamView: React.FC = () => {
     setTimeout(() => setFeedbackMsg(null), 4000);
   };
 
-  const loadTeam = async () => {
+  const loadTeam = async (showToast = false) => {
     if (currentPartner?.id) {
-      setLoading(true);
+      setIsSyncing(true);
       try {
         const data = await getUsersByPartner(currentPartner.id);
         if (data && data.length > 0) {
@@ -52,15 +60,32 @@ export const PartnerTeamView: React.FC = () => {
         } else {
           setMembers([]);
         }
+        if (showToast) {
+          showFeedback(`Equipe sincronizada com o banco (${data?.length || 0} membros).`);
+        }
       } catch (err) {
         console.warn('Team fetch notice:', err);
       }
       setLoading(false);
+      setIsSyncing(false);
     }
   };
 
   useEffect(() => {
     loadTeam();
+
+    if (currentPartner?.id) {
+      const unsubscribe = listenToPartnerUsers(currentPartner.id, (realtimeTeam) => {
+        if (realtimeTeam) {
+          setMembers(realtimeTeam);
+          setLoading(false);
+        }
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    }
   }, [currentPartner?.id]);
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
@@ -137,13 +162,25 @@ export const PartnerTeamView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => { setFormError(null); setCreateModalOpen(true); }}
-          className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors shrink-0 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Cadastrar Novo Funcionário</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => loadTeam(true)}
+            disabled={isSyncing}
+            className="py-2.5 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs flex items-center justify-center gap-2 transition-colors shrink-0 cursor-pointer disabled:opacity-50"
+            title="Sincronizar equipe com o banco de dados"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+          </button>
+
+          <button
+            onClick={() => { setFormError(null); setCreateModalOpen(true); }}
+            className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Cadastrar Novo Funcionário</span>
+          </button>
+        </div>
       </div>
 
       {/* Feedback Toast */}

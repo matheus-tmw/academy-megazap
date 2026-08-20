@@ -5,10 +5,10 @@ import {
   getDocs, 
   setDoc, 
   updateDoc, 
-  deleteDoc,
+  deleteDoc, 
+  onSnapshot,
   query, 
   where,
-  orderBy,
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
@@ -29,13 +29,16 @@ import { provisionFirebaseAuthUser, generateTemporaryPassword } from './authAdmi
 /**
  * Helper to deduplicate list of users by email and clean up obsolete seed records
  */
-async function deduplicateUsersList(rawUsers: UserProfile[]): Promise<UserProfile[]> {
+export async function deduplicateUsersList(rawUsers: UserProfile[]): Promise<UserProfile[]> {
   const emailMap = new Map<string, UserProfile>();
   const obsoleteDocIdsToDelete: string[] = [];
 
   for (const user of rawUsers) {
     const key = (user.email || '').toLowerCase().trim();
-    if (!key) continue;
+    if (!key) {
+      if (user.uid) emailMap.set(user.uid, user);
+      continue;
+    }
 
     if (!emailMap.has(key)) {
       emailMap.set(key, user);
@@ -48,7 +51,7 @@ async function deduplicateUsersList(rawUsers: UserProfile[]): Promise<UserProfil
         obsoleteDocIdsToDelete.push('user_matheus_barros');
         emailMap.set(key, user);
       } else {
-        // Keep the most recently updated profile
+        // Keep the most complete / recently updated profile
         emailMap.set(key, user);
       }
     }
@@ -61,30 +64,92 @@ async function deduplicateUsersList(rawUsers: UserProfile[]): Promise<UserProfil
     });
   }
 
-  return Array.from(emailMap.values());
+  const list = Array.from(emailMap.values());
+  // Sort by update / creation date descending
+  list.sort((a, b) => {
+    const dateA = a.updatedAt || a.createdAt || '';
+    const dateB = b.updatedAt || b.createdAt || '';
+    if (dateA && dateB) {
+      return String(dateB).localeCompare(String(dateA));
+    }
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  return list;
+}
+
+/**
+ * Real-time listener for all users in the platform (used by Super Admin)
+ */
+export function listenToAllUsers(
+  onUpdate: (users: UserProfile[]) => void,
+  onError?: (error: any) => void
+): () => void {
+  const collRef = collection(db, 'users');
+  return onSnapshot(collRef, async (snapshot) => {
+    try {
+      const raw = snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
+      const deduplicated = await deduplicateUsersList(raw);
+      onUpdate(deduplicated);
+    } catch (err) {
+      console.warn('Real-time users processing notice:', err);
+      if (onError) onError(err);
+    }
+  }, (error) => {
+    console.warn('Real-time users listener error:', error);
+    if (onError) onError(error);
+  });
+}
+
+/**
+ * Real-time listener for partner users (used by Partner Admin)
+ */
+export function listenToPartnerUsers(
+  partnerId: string,
+  onUpdate: (users: UserProfile[]) => void,
+  onError?: (error: any) => void
+): () => void {
+  const collRef = collection(db, 'users');
+  return onSnapshot(collRef, async (snapshot) => {
+    try {
+      const raw = snapshot.docs
+        .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
+        .filter(u => u.partnerId === partnerId || (partnerId === 'partner_ultrafox' && (!u.partnerId || u.partnerId === 'partner_ultrafox') && u.role !== 'super_admin'));
+      const deduplicated = await deduplicateUsersList(raw);
+      onUpdate(deduplicated);
+    } catch (err) {
+      console.warn('Real-time partner users processing notice:', err);
+      if (onError) onError(err);
+    }
+  }, (error) => {
+    console.warn('Real-time partner users listener error:', error);
+    if (onError) onError(error);
+  });
 }
 
 export async function getAllUsers(): Promise<UserProfile[]> {
   const path = 'users';
   try {
-    const q = query(collection(db, path), orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(collection(db, path));
     const raw = snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
     return await deduplicateUsersList(raw);
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    console.warn('getAllUsers notice:', error);
+    return [];
   }
 }
 
 export async function getUsersByPartner(partnerId: string): Promise<UserProfile[]> {
   const path = 'users';
   try {
-    const q = query(collection(db, path), where('partnerId', '==', partnerId));
-    const snapshot = await getDocs(q);
-    const raw = snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
+    const snapshot = await getDocs(collection(db, path));
+    const raw = snapshot.docs
+      .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
+      .filter(u => u.partnerId === partnerId || (partnerId === 'partner_ultrafox' && (!u.partnerId || u.partnerId === 'partner_ultrafox') && u.role !== 'super_admin'));
     return await deduplicateUsersList(raw);
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    console.warn('getUsersByPartner notice:', error);
+    return [];
   }
 }
 

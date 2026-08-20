@@ -130,11 +130,7 @@ export async function loginWithEmail(emailOrUsername: string, password: string):
       return newProfile;
     } else {
       // Auto-provision Firestore document for user created in Firebase Auth
-      const isSuperAdminEmail = 
-        user.email?.toLowerCase().includes('matheus') || 
-        user.email?.toLowerCase().includes('admin') || 
-        user.email?.toLowerCase().includes('.adm') || 
-        user.email === 'matheus.tmw@gmail.com';
+      const isSuperAdminEmail = user.email?.toLowerCase().trim() === 'matheus.tmw@gmail.com';
 
       const role: UserRole = isSuperAdminEmail ? 'super_admin' : 'partner_user';
       const partnerId = isSuperAdminEmail ? null : 'partner_ultrafox';
@@ -159,11 +155,7 @@ export async function loginWithEmail(emailOrUsername: string, password: string):
     }
   } catch (error) {
     console.warn('Profile sync fallback:', error);
-    const isSuperAdminEmail = 
-      user.email?.toLowerCase().includes('matheus') || 
-      user.email?.toLowerCase().includes('admin') || 
-      user.email?.toLowerCase().includes('.adm') || 
-      user.email === 'matheus.tmw@gmail.com';
+    const isSuperAdminEmail = user.email?.toLowerCase().trim() === 'matheus.tmw@gmail.com';
 
     return {
       uid: user.uid,
@@ -265,38 +257,44 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       const q = query(collection(db, 'users'), where('email', '==', currentEmail));
       const snap = await getDocs(q);
 
-      let highestRole: UserRole = currentProfile?.role || 'partner_user';
+      // Prioritize the role explicitly saved in Firestore. No email guessing!
+      let resolvedRole: UserRole = currentProfile?.role || 'partner_user';
+      let resolvedPartnerId: string | null = currentProfile?.partnerId || null;
       let bestName = currentProfile?.name || '';
       let bestMustChangePassword = currentProfile?.mustChangePassword;
       const otherDocIdsToDelete: string[] = [];
 
       snap.docs.forEach(d => {
         const data = d.data() as UserProfile;
-        if (data.role === 'super_admin') {
-          highestRole = 'super_admin';
-        } else if (data.role === 'partner_admin' && highestRole !== 'super_admin') {
-          highestRole = 'partner_admin';
+        // If document matches UID, take its direct role
+        if (d.id === uid) {
+          resolvedRole = data.role;
+          resolvedPartnerId = data.role === 'super_admin' ? null : (data.partnerId || resolvedPartnerId);
+        } else {
+          // If we found another doc created administratively by email, adopt its role if it exists
+          if (!currentProfile && data.role) {
+            resolvedRole = data.role;
+            resolvedPartnerId = data.role === 'super_admin' ? null : (data.partnerId || resolvedPartnerId);
+          }
+          otherDocIdsToDelete.push(d.id);
         }
         if (data.name && !bestName) bestName = data.name;
         if (data.mustChangePassword) bestMustChangePassword = true;
-        if (d.id !== uid) otherDocIdsToDelete.push(d.id);
       });
 
-      // Special rule: Any .adm or admin in email/identifier is super_admin
-      const emailLower = currentEmail.toLowerCase();
-      if (emailLower.includes('.adm') || emailLower.includes('admin') || emailLower === 'matheus.tmw@gmail.com') {
-        highestRole = 'super_admin';
+      // Special rule: Matheus master super_admin
+      if (currentEmail.toLowerCase().trim() === 'matheus.tmw@gmail.com') {
+        resolvedRole = 'super_admin';
+        resolvedPartnerId = null;
       }
-
-      const partnerId = highestRole === 'super_admin' ? null : (currentProfile?.partnerId || (snap.docs[0]?.data() as UserProfile)?.partnerId || 'partner_ultrafox');
 
       const consolidatedProfile: UserProfile = {
         ...(currentProfile || {}),
         uid,
         name: bestName || currentProfile?.name || auth.currentUser?.displayName || currentEmail.split('@')[0],
         email: currentEmail,
-        role: highestRole,
-        partnerId,
+        role: resolvedRole,
+        partnerId: resolvedRole === 'super_admin' ? null : (resolvedPartnerId || 'partner_ultrafox'),
         status: currentProfile?.status || 'active',
         mustChangePassword: bestMustChangePassword ?? currentProfile?.mustChangePassword ?? false,
         photoURL: currentProfile?.photoURL || auth.currentUser?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(bestName || 'User')}`,
@@ -355,13 +353,9 @@ export async function loginWithGoogle(defaultPartnerId: string | null = 'partner
       return { uid: userSnapshot.id, ...userSnapshot.data() } as UserProfile;
     } else {
       // New user registering via Google Login
-      const isSuperAdminEmail = 
-        user.email?.toLowerCase().includes('matheus') || 
-        user.email?.toLowerCase().includes('admin') || 
-        user.email === 'matheus.tmw@gmail.com';
-
-      const role: UserRole = isSuperAdminEmail ? 'super_admin' : 'partner_user';
-      const partnerId = isSuperAdminEmail ? null : defaultPartnerId;
+      const isMasterAdmin = user.email?.toLowerCase().trim() === 'matheus.tmw@gmail.com';
+      const role: UserRole = isMasterAdmin ? 'super_admin' : 'partner_user';
+      const partnerId = isMasterAdmin ? null : defaultPartnerId;
 
       const newProfile: UserProfile = {
         uid: user.uid,
@@ -382,17 +376,14 @@ export async function loginWithGoogle(defaultPartnerId: string | null = 'partner
     }
   } catch (error) {
     console.warn('Google auth profile sync fallback:', error);
-    const isSuperAdminEmail = 
-      user.email?.toLowerCase().includes('matheus') || 
-      user.email?.toLowerCase().includes('admin') || 
-      user.email === 'matheus.tmw@gmail.com';
+    const isMasterAdmin = user.email?.toLowerCase().trim() === 'matheus.tmw@gmail.com';
 
     return {
       uid: user.uid,
       name: user.displayName || user.email?.split('@')[0] || 'Usuário MegaZap',
       email: user.email || '',
-      role: isSuperAdminEmail ? 'super_admin' : 'partner_user',
-      partnerId: isSuperAdminEmail ? null : defaultPartnerId,
+      role: isMasterAdmin ? 'super_admin' : 'partner_user',
+      partnerId: isMasterAdmin ? null : defaultPartnerId,
       status: 'active',
       photoURL: user.photoURL || null,
       createdAt: new Date().toISOString(),
