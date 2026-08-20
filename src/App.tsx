@@ -39,7 +39,9 @@ import { PartnerTeamView } from './views/partner/PartnerTeamView';
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
 
 const AccessDeniedView: React.FC<{ requiredRole: string }> = ({ requiredRole }) => {
-  const { navigateTo, switchDemoRole } = useAcademy();
+  const { navigateTo, switchDemoRole, isRealSuperAdmin, realUserProfile } = useAcademy();
+  const canSwitchToRole = !realUserProfile || isRealSuperAdmin;
+
   return (
     <div className="max-w-md mx-auto my-12 p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center shadow-lg">
       <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-4">
@@ -57,12 +59,14 @@ const AccessDeniedView: React.FC<{ requiredRole: string }> = ({ requiredRole }) 
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar para Início</span>
         </button>
-        <button
-          onClick={() => switchDemoRole(requiredRole as any)}
-          className="w-full py-2 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-        >
-          Alternar para {requiredRole} (Modo Teste)
-        </button>
+        {canSwitchToRole && (
+          <button
+            onClick={() => switchDemoRole(requiredRole as any)}
+            className="w-full py-2 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+          >
+            Alternar para {requiredRole} (Modo Teste)
+          </button>
+        )}
       </div>
     </div>
   );

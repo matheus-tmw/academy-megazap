@@ -133,6 +133,10 @@ export interface AcademyContextType {
   isSuperAdmin: boolean;
   isPartnerAdmin: boolean;
   isPartnerUser: boolean;
+  realUserProfile: UserProfile | null;
+  isRealSuperAdmin: boolean;
+  isRealPartnerAdmin: boolean;
+  isRealPartnerUser: boolean;
   signInWithEmail: (email: string, pass: string) => Promise<boolean>;
   signUpWithEmail: (email: string, pass: string, name: string) => Promise<boolean>;
   signInWithGoogleAuth: () => Promise<boolean>;
@@ -698,13 +702,75 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
     await sendResetPassword(email);
   };
 
+  const isRealSuperAdmin = useMemo(() => {
+    if (realUserProfile) return realUserProfile.role === 'super_admin';
+    return activeRole === 'super_admin';
+  }, [realUserProfile, activeRole]);
+
+  const isRealPartnerAdmin = useMemo(() => {
+    if (realUserProfile) return realUserProfile.role === 'partner_admin';
+    return activeRole === 'partner_admin';
+  }, [realUserProfile, activeRole]);
+
+  const isRealPartnerUser = useMemo(() => {
+    if (realUserProfile) return realUserProfile.role === 'partner_user';
+    return activeRole === 'partner_user';
+  }, [realUserProfile, activeRole]);
+
   const switchDemoRole = (newRole: UserRole) => {
+    // SECURITY GUARD: If real user is logged in, they CANNOT escalate beyond their real role!
+    if (realUserProfile) {
+      if (realUserProfile.role === 'partner_user' && newRole !== 'partner_user') {
+        console.warn('Permissão negada: Alunos não podem alternar para perfis administrativos.');
+        return;
+      }
+      if (realUserProfile.role === 'partner_admin' && newRole === 'super_admin') {
+        console.warn('Permissão negada: Administradores de parceiro não possuem acesso a Super Admin.');
+        return;
+      }
+    }
+
     setActiveRole(newRole);
     localStorage.setItem(STORAGE_KEYS.DEMO_ROLE, newRole);
 
+    // CRITICAL: When a real user is logged in, NEVER overwrite their profile with dummy demo users (like Carlos Mendes)!
+    if (realUserProfile) {
+      setCurrentUser(realUserProfile);
+
+      if (newRole === 'super_admin' && realUserProfile.role === 'super_admin') {
+        setCurrentPartner({
+          id: 'partner_megazap_hq',
+          name: 'MegaZap Brasil HQ',
+          displayName: 'MegaZap Brasil',
+          code: 'MEGAZAP_HQ',
+          status: 'active',
+          createdAt: '',
+          updatedAt: '',
+          createdBy: 'system'
+        });
+        setActiveTab('admin-dashboard');
+      } else if (newRole === 'partner_admin') {
+        if (realUserProfile.partnerId) {
+          getPartner(realUserProfile.partnerId).then(p => {
+            if (p) setCurrentPartner(p);
+          }).catch(err => console.log('Partner fetch error:', err));
+        }
+        setActiveTab('partner-dashboard');
+      } else {
+        // Aluno / Partner User view
+        if (realUserProfile.partnerId) {
+          getPartner(realUserProfile.partnerId).then(p => {
+            if (p) setCurrentPartner(p);
+          }).catch(err => console.log('Partner fetch error:', err));
+        }
+        setActiveTab('dashboard');
+      }
+      return;
+    }
+
+    // Pure unauthenticated demo fallback
     if (newRole === 'super_admin') {
-      const adminProfile = realUserProfile || DEMO_PROFILES.super_admin;
-      setCurrentUser(adminProfile);
+      setCurrentUser(DEMO_PROFILES.super_admin);
       setCurrentPartner({
         id: 'partner_megazap_hq',
         name: 'MegaZap Brasil HQ',
@@ -763,6 +829,9 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
       photoURL: photoURL || currentUser.photoURL,
     };
     setCurrentUser(updated);
+    if (realUserProfile) {
+      setRealUserProfile(updated);
+    }
     if (auth.currentUser) {
       await updateProfileService(currentUser.uid, { name, photoURL });
     }
@@ -1101,6 +1170,10 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
         isSuperAdmin: activeRole === 'super_admin',
         isPartnerAdmin: activeRole === 'partner_admin',
         isPartnerUser: activeRole === 'partner_user',
+        realUserProfile,
+        isRealSuperAdmin,
+        isRealPartnerAdmin,
+        isRealPartnerUser,
         signInWithEmail,
         signUpWithEmail,
         signInWithGoogleAuth,

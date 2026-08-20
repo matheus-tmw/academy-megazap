@@ -53,7 +53,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
     signOutUser,
     isSuperAdmin,
     isPartnerAdmin,
-    isPartnerUser
+    isPartnerUser,
+    isRealSuperAdmin,
+    isRealPartnerAdmin,
+    isRealPartnerUser
   } = useAcademy();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -185,42 +188,71 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
       {/* Right side: Global Search, Quick Persona Switcher, Notifications, Theme, User Profile */}
       <div className="flex items-center gap-1.5 sm:gap-2.5">
         
-        {/* Quick Role Switcher Pill (Dev / Testing helper) */}
-        <div className="hidden xl:flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px]">
-          <button
-            onClick={() => switchDemoRole('super_admin')}
-            className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
-              activeRole === 'super_admin'
-                ? 'bg-sky-600 text-white font-bold shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-            title="Simular Super Admin MegaZap"
-          >
-            👑 Super Admin
-          </button>
-          <button
-            onClick={() => switchDemoRole('partner_admin')}
-            className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
-              activeRole === 'partner_admin'
-                ? 'bg-emerald-600 text-white font-bold shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-            title="Simular Administrador do Parceiro (Ultrafox)"
-          >
-            🏢 Partner Admin
-          </button>
-          <button
-            onClick={() => switchDemoRole('partner_user')}
-            className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
-              activeRole === 'partner_user'
-                ? 'bg-purple-600 text-white font-bold shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-            title="Simular Aluno da Empresa"
-          >
-            🎓 Aluno
-          </button>
-        </div>
+        {/* Quick Role Switcher Pill */}
+        {isRealSuperAdmin && (
+          <div className="hidden xl:flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px]">
+            <button
+              onClick={() => switchDemoRole('super_admin')}
+              className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                activeRole === 'super_admin'
+                  ? 'bg-sky-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Painel Geral Super Admin MegaZap"
+            >
+              👑 Super Admin
+            </button>
+            <button
+              onClick={() => switchDemoRole('partner_admin')}
+              className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                activeRole === 'partner_admin'
+                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Painel do Parceiro"
+            >
+              🏢 Partner Admin
+            </button>
+            <button
+              onClick={() => switchDemoRole('partner_user')}
+              className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                activeRole === 'partner_user'
+                  ? 'bg-purple-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Área do Aluno"
+            >
+              🎓 Aluno
+            </button>
+          </div>
+        )}
+
+        {isRealPartnerAdmin && !isRealSuperAdmin && (
+          <div className="hidden xl:flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px]">
+            <button
+              onClick={() => switchDemoRole('partner_admin')}
+              className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                activeRole === 'partner_admin'
+                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Painel da Minha Empresa"
+            >
+              🏢 Partner Admin
+            </button>
+            <button
+              onClick={() => switchDemoRole('partner_user')}
+              className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                activeRole === 'partner_user'
+                  ? 'bg-purple-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Área de Cursos do Aluno"
+            >
+              🎓 Aluno
+            </button>
+          </div>
+        )}
 
         {/* Global Search Button */}
         <button
@@ -390,32 +422,56 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                 </button>
               </div>
 
-              {/* Persona selector for quick testing */}
-              <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Alternar Papel (Validação):
+              {/* Persona selector based on permissions */}
+              {isRealSuperAdmin && (
+                <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Alternar Papel (Validação):
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 text-[10px]">
+                    <button
+                      onClick={() => { switchDemoRole('super_admin'); setIsUserMenuOpen(false); }}
+                      className={`p-1 rounded text-center border font-medium ${activeRole === 'super_admin' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600'}`}
+                    >
+                      Super
+                    </button>
+                    <button
+                      onClick={() => { switchDemoRole('partner_admin'); setIsUserMenuOpen(false); }}
+                      className={`p-1 rounded text-center border font-medium ${activeRole === 'partner_admin' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600'}`}
+                    >
+                      Partner
+                    </button>
+                    <button
+                      onClick={() => { switchDemoRole('partner_user'); setIsUserMenuOpen(false); }}
+                      className={`p-1 rounded text-center border font-medium ${activeRole === 'partner_user' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600'}`}
+                    >
+                      Aluno
+                    </button>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-1 text-[10px]">
-                  <button
-                    onClick={() => { switchDemoRole('super_admin'); setIsUserMenuOpen(false); }}
-                    className={`p-1 rounded text-center border font-medium ${activeRole === 'super_admin' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600'}`}
-                  >
-                    Super
-                  </button>
-                  <button
-                    onClick={() => { switchDemoRole('partner_admin'); setIsUserMenuOpen(false); }}
-                    className={`p-1 rounded text-center border font-medium ${activeRole === 'partner_admin' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600'}`}
-                  >
-                    Partner
-                  </button>
-                  <button
-                    onClick={() => { switchDemoRole('partner_user'); setIsUserMenuOpen(false); }}
-                    className={`p-1 rounded text-center border font-medium ${activeRole === 'partner_user' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600'}`}
-                  >
-                    Aluno
-                  </button>
+              )}
+
+              {isRealPartnerAdmin && !isRealSuperAdmin && (
+                <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Alternar Visão:
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-[10px]">
+                    <button
+                      onClick={() => { switchDemoRole('partner_admin'); setIsUserMenuOpen(false); }}
+                      className={`p-1 rounded text-center border font-medium ${activeRole === 'partner_admin' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600'}`}
+                    >
+                      Painel Empresa
+                    </button>
+                    <button
+                      onClick={() => { switchDemoRole('partner_user'); setIsUserMenuOpen(false); }}
+                      className={`p-1 rounded text-center border font-medium ${activeRole === 'partner_user' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600'}`}
+                    >
+                      Área do Aluno
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
                 <button
