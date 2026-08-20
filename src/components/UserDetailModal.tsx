@@ -68,18 +68,8 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
         if (!isMounted) return;
 
-        if (prog) {
-          setProgressMap(prog);
-        } else {
-          // Provide mock fallback data if Firestore document has no records yet
-          setProgressMap(generateMockProgress(user.uid));
-        }
-
-        if (certs && certs.length > 0) {
-          setCertificates(certs);
-        } else {
-          setCertificates(generateMockCertificates(user));
-        }
+        setProgressMap(prog || {});
+        setCertificates(certs || []);
 
         if (partnerData) {
           setPartner(partnerData);
@@ -87,8 +77,8 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       } catch (err) {
         console.warn('Error loading user detail info:', err);
         if (isMounted) {
-          setProgressMap(generateMockProgress(user.uid));
-          setCertificates(generateMockCertificates(user));
+          setProgressMap({});
+          setCertificates([]);
         }
       } finally {
         if (isMounted) setLoading(false);

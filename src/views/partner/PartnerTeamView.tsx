@@ -124,7 +124,11 @@ export const PartnerTeamView: React.FC = () => {
           message: err.message
         });
       } else {
-        setFormError(err.message || 'Erro ao cadastrar funcionário.');
+        let msg = err.message || 'Erro ao cadastrar funcionário.';
+        if (msg.startsWith('{') && msg.includes('Missing or insufficient permissions')) {
+          msg = 'Permissão negada ao cadastrar usuário. Verifique com a administração.';
+        }
+        setFormError(msg);
       }
     }
     setFormLoading(false);

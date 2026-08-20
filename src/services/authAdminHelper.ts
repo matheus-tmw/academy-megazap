@@ -53,9 +53,23 @@ export async function provisionFirebaseAuthUser(
     }
 
     if (error?.code === 'auth/email-already-in-use') {
+      let recoveredUid: string | undefined = undefined;
+      // Attempt to retrieve UID if account was previously provisioned with default initial password
+      try {
+        const recoveryApp = initializeApp(firebaseConfig, `${tempAppName}-recovery`);
+        const recoveryAuth = getAuth(recoveryApp);
+        const userCred = await signInWithEmailAndPassword(recoveryAuth, normalizedEmail, initialPassword);
+        recoveredUid = userCred.user.uid;
+        await signOut(recoveryAuth).catch(() => {});
+        await deleteApp(recoveryApp).catch(() => {});
+      } catch (e) {
+        // Ignored, user likely exists with custom password
+      }
+
       return { 
         success: false, 
         alreadyExists: true, 
+        uid: recoveredUid,
         error: 'Este nome de usuário ou e-mail já está cadastrado no sistema.' 
       };
     }

@@ -7,6 +7,7 @@ import {
   Maximize2, 
   Minimize2,
   RotateCcw, 
+  RotateCw,
   CheckCircle2, 
   Circle, 
   ArrowLeft, 
@@ -23,7 +24,9 @@ import {
   ChevronRight,
   List,
   Edit3,
-  Check
+  Check,
+  Lock,
+  AlertTriangle
 } from 'lucide-react';
 import { useAcademy } from '../context/AcademyContext';
 
@@ -44,7 +47,8 @@ export const AulaPlayerView: React.FC = () => {
     getLessonProgress,
     updateLessonProgress,
     userNotes,
-    saveUserNote
+    saveUserNote,
+    activeRole
   } = useAcademy();
 
   // Video player simulator states
@@ -56,6 +60,9 @@ export const AulaPlayerView: React.FC = () => {
   const [volume, setVolume] = useState<number>(80);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'conteudo' | 'recursos' | 'anotacoes' | 'playlist'>('conteudo');
+  const [showBypassWarning, setShowBypassWarning] = useState<boolean>(false);
+  const [maxWatchedSec, setMaxWatchedSec] = useState<number>(0);
+  const [showSeekNotice, setShowSeekNotice] = useState<boolean>(false);
   
   // Note state
   const [noteText, setNoteText] = useState<string>('');
@@ -100,16 +107,30 @@ export const AulaPlayerView: React.FC = () => {
     setNoteText(userNotes[currentLesson.id] || '');
     setIsPlaying(false);
     setRealDurationSec(null);
+    setShowSeekNotice(false);
+    setShowBypassWarning(false);
     
     // If already in progress, seed current time
-    const initialPct = getLessonProgress(currentLesson.id);
+    const initialPct = getLessonProgress(currentLesson.id) || 0;
     const startSec = Math.round((initialPct / 100) * totalDurationSeconds);
     setCurrentTimeSec(startSec);
+
+    const isSuper = activeRole === 'super_admin';
+    const done = isCompleted(currentLesson.id);
+    const initialMax = (done || isSuper) ? totalDurationSeconds : startSec;
+    setMaxWatchedSec(initialMax);
 
     if (html5VideoRef.current) {
       html5VideoRef.current.currentTime = startSec;
     }
   }, [currentLesson.id]);
+
+  // Keep maxWatchedSec updated as current time progresses
+  useEffect(() => {
+    if (currentTimeSec > maxWatchedSec) {
+      setMaxWatchedSec(currentTimeSec);
+    }
+  }, [currentTimeSec]);
 
   // Sincronizar velocidade e volume do vídeo HTML5
   useEffect(() => {
@@ -198,15 +219,42 @@ export const AulaPlayerView: React.FC = () => {
     }
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSec = Number(e.target.value);
-    setCurrentTimeSec(newSec);
-    const newPct = Math.round((newSec / totalDurationSeconds) * 100);
+  const attemptSeek = (requestedSec: number) => {
+    const isSuper = activeRole === 'super_admin';
+    const done = isCompleted(currentLesson.id);
+
+    if (isSuper || done) {
+      applySeek(requestedSec);
+      setShowSeekNotice(false);
+      return;
+    }
+
+    // Max allowed target is 30 seconds beyond the maximum position reached so far
+    const maxAllowedSec = Math.min(totalDurationSeconds, maxWatchedSec + 30);
+
+    if (requestedSec > maxAllowedSec) {
+      applySeek(maxAllowedSec);
+      setShowSeekNotice(true);
+    } else {
+      applySeek(requestedSec);
+      setShowSeekNotice(false);
+    }
+  };
+
+  const applySeek = (newSec: number) => {
+    const clampedSec = Math.max(0, Math.min(totalDurationSeconds, newSec));
+    setCurrentTimeSec(clampedSec);
+    setMaxWatchedSec(prev => Math.max(prev, clampedSec));
+    const newPct = Math.round((clampedSec / totalDurationSeconds) * 100);
     updateLessonProgress(currentLesson.id, newPct);
 
     if (html5VideoRef.current) {
-      html5VideoRef.current.currentTime = newSec;
+      html5VideoRef.current.currentTime = clampedSec;
     }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    attemptSeek(Number(e.target.value));
   };
 
   const handleSaveNote = () => {
@@ -221,7 +269,27 @@ export const AulaPlayerView: React.FC = () => {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
+  const savedPercent = getLessonProgress(currentLesson.id) || 0;
   const currentPercent = Math.min(100, Math.round((currentTimeSec / totalDurationSeconds) * 100));
+  const effectivePercent = Math.max(currentPercent, savedPercent);
+  const isSuperAdmin = activeRole === 'super_admin';
+  const canCompleteLesson = lessonCompleted || effectivePercent >= 80 || isSuperAdmin;
+
+  const handleToggleComplete = () => {
+    if (lessonCompleted) {
+      toggleLessonCompleted(currentLesson.id);
+      setShowBypassWarning(false);
+    } else if (canCompleteLesson) {
+      const ok = toggleLessonCompleted(currentLesson.id);
+      if (!ok) {
+        setShowBypassWarning(true);
+      } else {
+        setShowBypassWarning(false);
+      }
+    } else {
+      setShowBypassWarning(true);
+    }
+  };
 
   const allLessonsInTrack = currentTrack.modules.flatMap(m => m.lessons);
 
@@ -319,7 +387,19 @@ export const AulaPlayerView: React.FC = () => {
                   onTimeUpdate={(e) => {
                     const video = e.target as HTMLVideoElement;
                     const current = Math.round(video.currentTime);
+                    const isSuper = activeRole === 'super_admin';
+                    const done = lessonCompleted;
+
+                    if (!isSuper && !done && current > maxWatchedSec + 30) {
+                      const clamped = Math.min(totalDurationSeconds, maxWatchedSec + 30);
+                      video.currentTime = clamped;
+                      setCurrentTimeSec(clamped);
+                      setShowSeekNotice(true);
+                      return;
+                    }
+
                     setCurrentTimeSec(current);
+                    setMaxWatchedSec(prev => Math.max(prev, current));
                     const dur = realDurationSec || (video.duration && !isNaN(video.duration) ? Math.round(video.duration) : null) || totalDurationSeconds;
                     if (dur > 0) {
                       const pct = Math.min(100, Math.round((current / dur) * 100));
@@ -452,11 +532,21 @@ export const AulaPlayerView: React.FC = () => {
                   {/* Reset / Replay 10s */}
                   <button
                     type="button"
-                    onClick={() => setCurrentTimeSec(Math.max(0, currentTimeSec - 10))}
+                    onClick={() => attemptSeek(currentTimeSec - 10)}
                     className="hidden sm:block p-1 text-white/80 hover:text-white transition-colors cursor-pointer"
                     title="Voltar 10s"
                   >
                     <RotateCcw className="w-4 h-4" />
+                  </button>
+
+                  {/* Fast Forward 10s (capped) */}
+                  <button
+                    type="button"
+                    onClick={() => attemptSeek(currentTimeSec + 10)}
+                    className="hidden sm:block p-1 text-white/80 hover:text-white transition-colors cursor-pointer"
+                    title="Avançar 10s (máx. 30s do trecho assistido)"
+                  >
+                    <RotateCw className="w-4 h-4" />
                   </button>
 
                   {/* Volume Toggle & Slider */}
@@ -519,34 +609,82 @@ export const AulaPlayerView: React.FC = () => {
           </div>
 
           {/* PLAYER PROGRESS & ACTION BAR */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between text-xs mb-1.5">
-                <span className="font-semibold text-slate-700 dark:text-slate-200">Progresso da aula</span>
-                <span className="font-bold text-sky-700 dark:text-sky-400">{currentPercent}%</span>
+          <div className="space-y-2">
+            {showSeekNotice && !lessonCompleted && !isSuperAdmin && (
+              <div className="bg-sky-50 dark:bg-sky-950/80 border border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200 p-3 rounded-xl text-xs flex items-center justify-between gap-2.5 animate-fadeIn">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                  <div>
+                    <span className="font-bold block">Avanço de vídeo protegido!</span>
+                    <span>Para garantir a aprendizagem, você só pode avançar no máximo <b>30 segundos</b> além do trecho já assistido.</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSeekNotice(false)}
+                  className="text-xs font-bold text-sky-700 dark:text-sky-300 hover:underline shrink-0 cursor-pointer"
+                >
+                  Entendi
+                </button>
               </div>
-              <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-sky-600 rounded-full transition-all duration-300"
-                  style={{ width: `${currentPercent}%` }}
-                />
-              </div>
-            </div>
+            )}
 
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                id="toggle-complete-lesson-btn"
-                onClick={() => toggleLessonCompleted(currentLesson.id)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs ${
-                  lessonCompleted
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
-                    : 'bg-sky-600 text-white hover:bg-sky-700'
-                }`}
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{lessonCompleted ? 'Aula Concluída ✓' : 'Marcar como concluída'}</span>
-              </button>
+            {showBypassWarning && !lessonCompleted && !canCompleteLesson && (
+              <div className="bg-amber-50 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 p-3 rounded-xl text-xs flex items-start gap-2.5 animate-fadeIn">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">Assista à aula para poder concluir!</span>
+                  <span>Para garantir o aprendizado real, você precisa assistir a pelo menos <b>80% do vídeo</b>. Progresso atual do vídeo: <b>{effectivePercent}%</b>.</span>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">Progresso da aula</span>
+                  <span className="font-bold text-sky-700 dark:text-sky-400">{effectivePercent}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-sky-600 rounded-full transition-all duration-300"
+                    style={{ width: `${effectivePercent}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  id="toggle-complete-lesson-btn"
+                  onClick={handleToggleComplete}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                    lessonCompleted
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 cursor-pointer'
+                      : canCompleteLesson
+                      ? 'bg-sky-600 text-white hover:bg-sky-700 cursor-pointer'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-80'
+                  }`}
+                  title={!canCompleteLesson ? 'Assista a pelo menos 80% do vídeo para liberar a conclusão' : undefined}
+                >
+                  {lessonCompleted ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Aula Concluída ✓</span>
+                    </>
+                  ) : canCompleteLesson ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{isSuperAdmin && effectivePercent < 80 ? 'Concluir (Modo Admin)' : 'Marcar como concluída'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                      <span>Concluir ({effectivePercent}% / 80%)</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 

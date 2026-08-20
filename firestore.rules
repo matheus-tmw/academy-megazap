@@ -57,7 +57,7 @@ service cloud.firestore {
              data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
              data.email is string && data.email.size() <= 150 &&
              data.role in ['super_admin', 'partner_admin', 'partner_user'] &&
-             (data.partnerId == null || (data.partnerId is string && data.partnerId.size() <= 128)) &&
+             (!('partnerId' in data) || data.partnerId == null || (data.partnerId is string && data.partnerId.size() <= 128)) &&
              data.status in ['active', 'inactive', 'blocked'];
     }
 
@@ -116,8 +116,8 @@ service cloud.firestore {
     // 3. Users Collection & Subcollections
     match /users/{userId} {
       allow read: if true;
-      allow create, update: if isValidUser(incoming()) || isOwner(userId) || isSuperAdmin();
-      allow delete: if isSuperAdmin();
+      allow create, update: if isSignedIn() && (isValidUser(incoming()) || isOwner(userId) || isSuperAdmin());
+      allow delete: if isSuperAdmin() || isSignedIn();
 
       match /progress/{lessonId} {
         allow read, write: if true;

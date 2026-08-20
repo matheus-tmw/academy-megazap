@@ -1124,36 +1124,11 @@ export const ALL_LESSONS: Lesson[] = TRACKS_DATA.flatMap(t =>
 // Initial mock progress data aligned with prompt:
 // 72% overall, 12 of 17 completed in Atendimento track (or 12 total),
 // Primeiros Passos 100%, Atendimento 68%, Automação 35%, etc.
-export const INITIAL_COMPLETED_LESSON_IDS = [
-  // Primeiros passos: all 5 completed
-  'aula-pp-01',
-  'aula-pp-02',
-  'aula-pp-03',
-  'aula-pp-04',
-  'aula-pp-05',
-  // Atendimento: 6 completed
-  'aula-at-01',
-  'aula-at-02',
-  'aula-at-03',
-  'aula-at-04',
-  'aula-at-07',
-  'aula-at-09',
-  // Automação: 1 completed
-  'aula-aut-01'
-];
+export const INITIAL_COMPLETED_LESSON_IDS: string[] = [];
 
-export const INITIAL_LESSON_PROGRESS: Record<string, number> = {
-  'aula-at-05': 82, // Currently watching "Como utilizar as Mensagens Rápidas" at 82% (08:42 restantes)
-  'aula-at-06': 30,
-  'aula-aut-02': 40
-};
+export const INITIAL_LESSON_PROGRESS: Record<string, number> = {};
 
-export const INITIAL_FAVORITE_LESSON_IDS = [
-  'aula-at-05', // Mensagens Rápidas
-  'aula-aut-01', // Primeiro fluxo de automação
-  'aula-jadi-01', // O que é o JADI
-  'aula-adm-01'  // Configurar domínio
-];
+export const INITIAL_FAVORITE_LESSON_IDS: string[] = [];
 
 export const RECOMMENDED_LESSONS_IDS = [
   'aula-aut-01', // Como criar seu primeiro fluxo de automação

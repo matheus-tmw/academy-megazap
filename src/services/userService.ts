@@ -247,14 +247,30 @@ export async function createAdministrativeUser(params: {
   // STEP 2: Provision in Firebase Authentication
   const provisionResult = await provisionFirebaseAuthUser(normalizedEmail, 'Acesso01');
 
-  if (provisionResult.alreadyExists || !provisionResult.success) {
-    throw new UserAlreadyExistsError(
-      rawDisplayUsername,
-      `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
-    );
+  let userUid: string | null = null;
+
+  if (provisionResult.success && provisionResult.uid) {
+    userUid = provisionResult.uid;
+  } else if (provisionResult.alreadyExists) {
+    // Self-Healing Check: If Auth user exists, verify whether Firestore user document exists.
+    // If NO Firestore document exists, recover the UID and proceed with creating the missing profile!
+    if (provisionResult.uid) {
+      const existingUserDoc = await getDoc(doc(db, 'users', provisionResult.uid)).catch(() => null);
+      if (!existingUserDoc || !existingUserDoc.exists()) {
+        userUid = provisionResult.uid;
+      }
+    }
+
+    if (!userUid) {
+      throw new UserAlreadyExistsError(
+        rawDisplayUsername,
+        `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
+      );
+    }
+  } else {
+    throw new Error(provisionResult.error || 'Erro ao provisionar conta de acesso no sistema.');
   }
 
-  const userUid = provisionResult.uid || doc(collection(db, 'users')).id;
   const userRef = doc(db, 'users', userUid);
 
   const newUser: UserProfile = {
@@ -262,7 +278,7 @@ export async function createAdministrativeUser(params: {
     name: name.trim(),
     email: normalizedEmail,
     role: targetRole,
-    partnerId: targetRole === 'super_admin' ? null : targetPartnerId,
+    partnerId: targetRole === 'super_admin' ? null : (targetPartnerId || null),
     status,
     mustChangePassword: true,
     tempPassword: 'Acesso01',
@@ -284,19 +300,23 @@ export async function createAdministrativeUser(params: {
       createdBy: callerProfile?.uid || auth.currentUser?.uid || 'admin'
     });
 
-    // Write user profile (create mode without merge to prevent overwriting existing record!)
+    // Write user profile
     await setDoc(userRef, newUser);
   } catch (error: any) {
     if (
       error?.message?.includes('already-exists') || 
-      error?.code === 'already-exists' || 
-      error?.message?.includes('PERMISSION_DENIED')
+      error?.code === 'already-exists'
     ) {
       throw new UserAlreadyExistsError(
         rawDisplayUsername,
         `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
       );
     }
+
+    if (error?.message?.includes('Missing or insufficient permissions') || error?.code === 'permission-denied') {
+      throw new Error('Não foi possível salvar o perfil do usuário. Verifique se possui permissão de administrador.');
+    }
+
     handleFirestoreError(error, OperationType.CREATE, `users/${userUid}`);
   }
 

@@ -74,7 +74,7 @@ export interface AcademyContextType {
   userNotes: Record<string, string>;
   
   // Actions
-  toggleLessonCompleted: (lessonId: string) => void;
+  toggleLessonCompleted: (lessonId: string, force?: boolean) => boolean;
   markLessonCompleted: (lessonId: string) => void;
   updateLessonProgress: (lessonId: string, progress: number) => void;
   toggleFavorite: (lessonId: string) => void;
@@ -526,18 +526,22 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
           if (rec.completed) comp.push(id);
           prog[id] = rec.progressPercent;
         });
-        if (comp.length > 0) setCompletedLessons(comp);
-        if (Object.keys(prog).length > 0) setLessonProgress(prog);
+        setCompletedLessons(comp);
+        setLessonProgress(prog);
       });
 
       const unsubscribeFavs = listenToUserFavorites(currentUser.uid, (favoriteIds) => {
-        if (favoriteIds.length > 0) setFavoriteLessons(favoriteIds);
+        setFavoriteLessons(favoriteIds);
       });
 
       return () => {
         unsubscribeProgress();
         unsubscribeFavs();
       };
+    } else {
+      setCompletedLessons([]);
+      setLessonProgress({});
+      setFavoriteLessons([]);
     }
   }, [currentUser?.uid]);
 
@@ -694,6 +698,14 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
     await logout();
     setRealUserProfile(null);
     localStorage.removeItem(STORAGE_KEYS.DEMO_ROLE);
+    localStorage.removeItem(STORAGE_KEYS.COMPLETED);
+    localStorage.removeItem(STORAGE_KEYS.PROGRESS);
+    localStorage.removeItem(STORAGE_KEYS.FAVORITES);
+    localStorage.removeItem(STORAGE_KEYS.NOTES);
+    setCompletedLessons([]);
+    setLessonProgress({});
+    setFavoriteLessons([]);
+    setUserNotes({});
     setActiveRole('partner_user');
     setCurrentUser(null);
     setActiveTab('login');
@@ -929,9 +941,18 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
-  const toggleLessonCompleted = (lessonId: string) => {
+  const toggleLessonCompleted = (lessonId: string, force = false): boolean => {
+    const isAlready = completedLessons.includes(lessonId);
+    
+    // Anti-Bypass Rule: Require at least 80% progress before marking completed
+    if (!isAlready && activeRole !== 'super_admin' && !force) {
+      const currentProg = lessonProgress[lessonId] || 0;
+      if (currentProg < 80) {
+        return false;
+      }
+    }
+
     setCompletedLessons(prev => {
-      const isAlready = prev.includes(lessonId);
       if (isAlready) {
         return prev.filter(id => id !== lessonId);
       } else {
@@ -948,10 +969,12 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
         lessonId,
         courseId: lesson.trackId,
         moduleId: lesson.moduleId,
-        progressPercent: completedLessons.includes(lessonId) ? 0 : 100,
-        completed: !completedLessons.includes(lessonId),
+        progressPercent: isAlready ? 0 : 100,
+        completed: !isAlready,
       }).catch(err => console.warn('Firestore progress sync notice:', err));
     }
+
+    return true;
   };
 
   const markLessonCompleted = (lessonId: string) => {

@@ -162,7 +162,11 @@ export const AdminUsersView: React.FC = () => {
           message: err.message
         });
       } else {
-        setFormError(err.message || 'Erro ao criar usuário.');
+        let msg = err.message || 'Erro ao criar usuário.';
+        if (msg.startsWith('{') && msg.includes('Missing or insufficient permissions')) {
+          msg = 'Permissão negada ao salvar usuário. Verifique com a administração.';
+        }
+        setFormError(msg);
       }
     }
     setFormLoading(false);
@@ -197,7 +201,11 @@ export const AdminUsersView: React.FC = () => {
           message: err.message
         });
       } else {
-        setFormError(err.message || 'Erro ao atualizar usuário.');
+        let msg = err.message || 'Erro ao atualizar usuário.';
+        if (msg.startsWith('{') && msg.includes('Missing or insufficient permissions')) {
+          msg = 'Permissão negada ao atualizar usuário. Verifique com a administração.';
+        }
+        setFormError(msg);
       }
     }
     setFormLoading(false);
