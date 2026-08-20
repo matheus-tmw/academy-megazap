@@ -47,7 +47,6 @@ export class UserAlreadyExistsError extends Error {
  */
 export async function deduplicateUsersList(rawUsers: UserProfile[]): Promise<UserProfile[]> {
   const emailMap = new Map<string, UserProfile>();
-  const obsoleteDocIdsToDelete: string[] = [];
 
   for (const user of rawUsers) {
     const key = (user.email || '').toLowerCase().trim();
@@ -60,24 +59,11 @@ export async function deduplicateUsersList(rawUsers: UserProfile[]): Promise<Use
       emailMap.set(key, user);
     } else {
       const existing = emailMap.get(key)!;
-      // If one of them is the hardcoded seed document 'user_matheus_barros', prefer the real one
-      if (user.uid === 'user_matheus_barros') {
-        obsoleteDocIdsToDelete.push('user_matheus_barros');
-      } else if (existing.uid === 'user_matheus_barros') {
-        obsoleteDocIdsToDelete.push('user_matheus_barros');
-        emailMap.set(key, user);
-      } else {
-        // Keep the most complete / recently updated profile
+      // Prefer real profile over hardcoded seed id
+      if (user.uid !== 'user_matheus_barros') {
         emailMap.set(key, user);
       }
     }
-  }
-
-  // Delete obsolete seed duplicates asynchronously in background
-  if (obsoleteDocIdsToDelete.length > 0) {
-    obsoleteDocIdsToDelete.forEach(docId => {
-      deleteDoc(doc(db, 'users', docId)).catch(() => {});
-    });
   }
 
   const list = Array.from(emailMap.values());
@@ -303,8 +289,10 @@ export async function createAdministrativeUser(params: {
     // Write user profile
     await setDoc(userRef, newUser);
   } catch (error: any) {
+    const errorStr = String(error?.message || error?.code || error);
+    
     if (
-      error?.message?.includes('already-exists') || 
+      errorStr.includes('already-exists') || 
       error?.code === 'already-exists'
     ) {
       throw new UserAlreadyExistsError(
@@ -313,7 +301,17 @@ export async function createAdministrativeUser(params: {
       );
     }
 
-    if (error?.message?.includes('Missing or insufficient permissions') || error?.code === 'permission-denied') {
+    if (
+      errorStr.toLowerCase().includes('quota') || 
+      errorStr.toLowerCase().includes('resource-exhausted') || 
+      error?.code === 'resource-exhausted'
+    ) {
+      throw new Error(
+        `A conta de acesso ("${rawDisplayUsername}") foi criada no Autenticador (Firebase Auth), porém o banco de dados Firestore atingiu o limite gratuito diário do plano Spark (50.000 leituras/escritas/dia). A cota será zerada automaticamente pelo Firebase no próximo ciclo diário.`
+      );
+    }
+
+    if (errorStr.includes('Missing or insufficient permissions') || error?.code === 'permission-denied') {
       throw new Error('Não foi possível salvar o perfil do usuário. Verifique se possui permissão de administrador.');
     }
 

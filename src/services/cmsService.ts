@@ -274,14 +274,23 @@ export async function reorderCategoriesInDb(
 // TRACKS (COURSES), MODULES & LESSONS CRUD
 // ==========================================
 
-export async function fetchFullTracksFromDb(includeUnpublished = true): Promise<Track[]> {
+let cachedTracksInMemory: Track[] | null = null;
+let lastTracksFetchTimestamp = 0;
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+export async function fetchFullTracksFromDb(includeUnpublished = true, forceRefresh = false): Promise<Track[]> {
+  const now = Date.now();
+  if (!forceRefresh && cachedTracksInMemory && (now - lastTracksFetchTimestamp < CACHE_TTL_MS)) {
+    return cachedTracksInMemory;
+  }
+
   try {
     const coursesQuery = query(collection(db, 'courses'), orderBy('order', 'asc'));
     const coursesSnapshot = await getDocs(coursesQuery);
 
     if (coursesSnapshot.empty) {
-      // If Firestore is empty, seed from default TRACKS_DATA
-      await seedDefaultTracksToFirestore();
+      cachedTracksInMemory = TRACKS_DATA;
+      lastTracksFetchTimestamp = now;
       return TRACKS_DATA;
     }
 
@@ -402,10 +411,16 @@ export async function fetchFullTracksFromDb(includeUnpublished = true): Promise<
       });
     }
 
-    return tracksList;
+    if (tracksList.length > 0) {
+      cachedTracksInMemory = tracksList;
+      lastTracksFetchTimestamp = now;
+      return tracksList;
+    }
+
+    return cachedTracksInMemory || TRACKS_DATA;
   } catch (error) {
-    console.warn('Erro ao carregar trilhas do Firestore, fallback para TRACKS_DATA:', error);
-    return TRACKS_DATA;
+    console.warn('Erro ao carregar trilhas do Firestore, fallback para cache/TRACKS_DATA:', error);
+    return cachedTracksInMemory || TRACKS_DATA;
   }
 }
 

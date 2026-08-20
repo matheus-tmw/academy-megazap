@@ -8,15 +8,27 @@ import { TRACKS_DATA } from '../data/coursesData';
  */
 export async function seedInitialDatabase(force = false) {
   if (typeof window !== 'undefined') {
-    const alreadySeeded = sessionStorage.getItem('megazap_seeded_session');
+    const alreadySeeded = localStorage.getItem('megazap_db_seeded_v1');
     if (alreadySeeded && !force) {
       return;
     }
   }
 
   try {
+    // Quick check: If courses collection already has data in Firestore, mark as seeded and skip mass writes
+    const { getDoc } = await import('firebase/firestore');
+    const sampleCourseRef = doc(db, 'courses', 'primeiros-passos');
+    const sampleSnap = await getDoc(sampleCourseRef).catch(() => null);
+
+    if (sampleSnap && sampleSnap.exists() && !force) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('megazap_db_seeded_v1', 'true');
+      }
+      return;
+    }
+
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('megazap_seeded_session', 'true');
+      localStorage.setItem('megazap_db_seeded_v1', 'true');
     }
 
     // 1. Partners

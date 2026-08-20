@@ -250,72 +250,85 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const userDocRef = doc(db, 'users', uid);
   try {
     const snapshot = await getDoc(userDocRef);
-    let currentProfile: UserProfile | null = snapshot.exists() ? ({ uid: snapshot.id, ...snapshot.data() } as UserProfile) : null;
+    if (snapshot.exists()) {
+      const data = snapshot.data() as UserProfile;
+      const currentEmail = (data.email || auth.currentUser?.email || '').toLowerCase().trim();
 
-    const currentEmail = currentProfile?.email || auth.currentUser?.email;
-    if (currentEmail) {
-      const q = query(collection(db, 'users'), where('email', '==', currentEmail));
-      const snap = await getDocs(q);
+      let effectiveRole: UserRole = data.role || 'partner_user';
+      let effectivePartnerId: string | null = data.partnerId;
 
-      // Prioritize the role explicitly saved in Firestore. No email guessing!
-      let resolvedRole: UserRole = currentProfile?.role || 'partner_user';
-      let resolvedPartnerId: string | null = currentProfile?.partnerId || null;
-      let bestName = currentProfile?.name || '';
-      let bestMustChangePassword = currentProfile?.mustChangePassword;
-      const otherDocIdsToDelete: string[] = [];
-
-      snap.docs.forEach(d => {
-        const data = d.data() as UserProfile;
-        // If document matches UID, take its direct role
-        if (d.id === uid) {
-          resolvedRole = data.role;
-          resolvedPartnerId = data.role === 'super_admin' ? null : (data.partnerId || resolvedPartnerId);
-        } else {
-          // If we found another doc created administratively by email, adopt its role if it exists
-          if (!currentProfile && data.role) {
-            resolvedRole = data.role;
-            resolvedPartnerId = data.role === 'super_admin' ? null : (data.partnerId || resolvedPartnerId);
-          }
-          otherDocIdsToDelete.push(d.id);
-        }
-        if (data.name && !bestName) bestName = data.name;
-        if (data.mustChangePassword) bestMustChangePassword = true;
-      });
-
-      // Special rule: Matheus master super_admin
-      if (currentEmail.toLowerCase().trim() === 'matheus.tmw@gmail.com') {
-        resolvedRole = 'super_admin';
-        resolvedPartnerId = null;
+      if (currentEmail === 'matheus.tmw@gmail.com') {
+        effectiveRole = 'super_admin';
+        effectivePartnerId = null;
       }
 
-      const consolidatedProfile: UserProfile = {
-        ...(currentProfile || {}),
-        uid,
-        name: bestName || currentProfile?.name || auth.currentUser?.displayName || currentEmail.split('@')[0],
-        email: currentEmail,
-        role: resolvedRole,
-        partnerId: resolvedRole === 'super_admin' ? null : (resolvedPartnerId || 'partner_ultrafox'),
-        status: currentProfile?.status || 'active',
-        mustChangePassword: bestMustChangePassword ?? currentProfile?.mustChangePassword ?? false,
-        photoURL: currentProfile?.photoURL || auth.currentUser?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(bestName || 'User')}`,
-        updatedAt: serverTimestamp() as any,
-        createdAt: currentProfile?.createdAt || serverTimestamp() as any,
+      return {
+        ...data,
+        uid: snapshot.id,
+        role: effectiveRole,
+        partnerId: effectiveRole === 'super_admin' ? null : (effectivePartnerId || 'partner_ultrafox'),
       };
-
-      // Always sync the canonical users/{uid} document with the resolved role
-      await setDoc(userDocRef, consolidatedProfile, { merge: true }).catch(() => {});
-
-      // Delete orphaned duplicate docs
-      otherDocIdsToDelete.forEach(id => {
-        deleteDoc(doc(db, 'users', id)).catch(() => {});
-      });
-
-      return consolidatedProfile;
     }
 
-    return currentProfile;
+    // Document does not exist by direct UID, check by email once
+    const currentEmail = (auth.currentUser?.email || '').toLowerCase().trim();
+    if (currentEmail) {
+      const isMasterAdmin = currentEmail === 'matheus.tmw@gmail.com';
+      let resolvedRole: UserRole = isMasterAdmin ? 'super_admin' : 'partner_user';
+      let resolvedPartnerId: string | null = isMasterAdmin ? null : 'partner_ultrafox';
+      let bestName = auth.currentUser?.displayName || currentEmail.split('@')[0];
+
+      try {
+        const q = query(collection(db, 'users'), where('email', '==', currentEmail));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const docData = snap.docs[0].data() as UserProfile;
+          if (docData.role) resolvedRole = docData.role;
+          if (docData.partnerId) resolvedPartnerId = docData.partnerId;
+          if (docData.name) bestName = docData.name;
+        }
+      } catch (qErr) {
+        console.warn('Email lookup notice:', qErr);
+      }
+
+      const newProfile: UserProfile = {
+        uid,
+        name: bestName,
+        email: currentEmail,
+        role: isMasterAdmin ? 'super_admin' : resolvedRole,
+        partnerId: isMasterAdmin ? null : (resolvedPartnerId || 'partner_ultrafox'),
+        status: 'active',
+        photoURL: auth.currentUser?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(bestName)}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Best effort setDoc without throwing if quota reached
+      setDoc(userDocRef, newProfile, { merge: true }).catch(() => {});
+
+      return newProfile;
+    }
+
+    return null;
   } catch (error) {
-    console.warn('getUserProfile fetch notice:', error);
+    console.warn('getUserProfile fetch notice (using fallback auth user):', error);
+    const firebaseUser = auth.currentUser;
+    if (firebaseUser) {
+      const emailLower = (firebaseUser.email || '').toLowerCase().trim();
+      const isMasterAdmin = emailLower === 'matheus.tmw@gmail.com';
+
+      return {
+        uid: firebaseUser.uid,
+        name: firebaseUser.displayName || emailLower.split('@')[0] || 'Usuário',
+        email: emailLower,
+        role: isMasterAdmin ? 'super_admin' : 'partner_user',
+        partnerId: isMasterAdmin ? null : 'partner_ultrafox',
+        status: 'active',
+        photoURL: firebaseUser.photoURL,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
     return null;
   }
 }
