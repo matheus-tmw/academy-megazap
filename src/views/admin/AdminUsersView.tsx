@@ -32,6 +32,8 @@ import { listPartners } from '../../services/partnerService';
 import { UserProfile, UserRole, UserStatus, Partner } from '../../types/backend';
 import { formatDisplayIdentifier } from '../../utils/userIdentifiers';
 import { PasswordResetModal } from '../../components/PasswordResetModal';
+import { UserDetailModal } from '../../components/UserDetailModal';
+import { UserAlreadyExistsModal } from '../../components/UserAlreadyExistsModal';
 
 export const AdminUsersView: React.FC = () => {
   const { currentUser } = useAcademy();
@@ -50,8 +52,15 @@ export const AdminUsersView: React.FC = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const [userToReset, setUserToReset] = useState<UserProfile | null>(null);
+
+  // Duplicate User Modal state
+  const [duplicateModal, setDuplicateModal] = useState<{ open: boolean; username: string; message?: string }>({
+    open: false,
+    username: ''
+  });
 
   // Form states
   const [formName, setFormName] = useState('');
@@ -146,14 +155,22 @@ export const AdminUsersView: React.FC = () => {
       setCreateModalOpen(false);
       showFeedback(`Usuário "${formName}" (${formatDisplayIdentifier(formEmail)}) cadastrado com sucesso!`);
     } catch (err: any) {
-      setFormError(err.message || 'Erro ao criar usuário.');
+      if (err.name === 'UserAlreadyExistsError' || err.username || err.message?.includes('já está cadastrado') || err.message?.includes('já pertence')) {
+        setDuplicateModal({
+          open: true,
+          username: err.username || formatDisplayIdentifier(formEmail),
+          message: err.message
+        });
+      } else {
+        setFormError(err.message || 'Erro ao criar usuário.');
+      }
     }
     setFormLoading(false);
   };
 
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser || !formName) return;
+    if (!selectedUser || !formName || !formEmail) return;
     setFormLoading(true);
     setFormError(null);
 
@@ -162,6 +179,7 @@ export const AdminUsersView: React.FC = () => {
         selectedUser.uid,
         {
           name: formName,
+          email: formEmail,
           role: formRole,
           partnerId: formRole === 'super_admin' ? null : formPartnerId,
           status: formStatus
@@ -172,7 +190,15 @@ export const AdminUsersView: React.FC = () => {
       setEditModalOpen(false);
       showFeedback(`Cadastro do usuário atualizado com sucesso.`);
     } catch (err: any) {
-      setFormError(err.message || 'Erro ao atualizar usuário.');
+      if (err.name === 'UserAlreadyExistsError' || err.username || err.message?.includes('já pertence') || err.message?.includes('já está cadastrado')) {
+        setDuplicateModal({
+          open: true,
+          username: err.username || formatDisplayIdentifier(formEmail),
+          message: err.message
+        });
+      } else {
+        setFormError(err.message || 'Erro ao atualizar usuário.');
+      }
     }
     setFormLoading(false);
   };
@@ -409,16 +435,27 @@ export const AdminUsersView: React.FC = () => {
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex items-center gap-2">
-                          <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs">75%</span>
+                        <button
+                          onClick={() => setSelectedUserForModal(user)}
+                          className="inline-flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-colors cursor-pointer group"
+                          title="Clique para ver o progresso detalhado das trilhas e aulas"
+                        >
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 group-hover:text-sky-600 dark:group-hover:text-sky-400 text-xs">75%</span>
                           <div className="w-12 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div className="h-full bg-emerald-500 rounded-full" style={{ width: '75%' }} />
                           </div>
-                        </div>
+                        </button>
                       </td>
 
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setSelectedUserForModal(user)}
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-sky-600 dark:text-sky-400 transition-colors cursor-pointer"
+                            title="Ver histórico de aulas e progresso completo"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={() => setUserToReset(user)}
                             className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
@@ -464,8 +501,11 @@ export const AdminUsersView: React.FC = () => {
 
       {/* Modal: Create User */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setCreateModalOpen(false); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Users className="w-4 h-4 text-sky-500" />
@@ -590,8 +630,11 @@ export const AdminUsersView: React.FC = () => {
 
       {/* Modal: Edit User */}
       {editModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setEditModalOpen(false); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-sky-500" />
@@ -628,9 +671,10 @@ export const AdminUsersView: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  disabled
+                  required
                   value={formEmail}
-                  className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-500 cursor-not-allowed font-mono"
+                  onChange={e => setFormEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono"
                 />
               </div>
 
@@ -706,8 +750,11 @@ export const AdminUsersView: React.FC = () => {
 
       {/* Confirmation Modal: Delete User */}
       {userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setUserToDelete(null); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Trash2 className="w-5 h-5 text-rose-500" />
               <span>Confirmar Exclusão de Usuário</span>
@@ -744,6 +791,26 @@ export const AdminUsersView: React.FC = () => {
           showFeedback(msg);
           loadData();
         }}
+      />
+
+      {/* User Progress and Detail Modal */}
+      <UserDetailModal
+        user={selectedUserForModal}
+        isOpen={Boolean(selectedUserForModal)}
+        onClose={() => setSelectedUserForModal(null)}
+        onResetPassword={(u) => {
+          setSelectedUserForModal(null);
+          setUserToReset(u);
+        }}
+        onToggleStatus={handleToggleStatus}
+      />
+
+      {/* Duplicate Username Modal */}
+      <UserAlreadyExistsModal
+        isOpen={duplicateModal.open}
+        username={duplicateModal.username}
+        customMessage={duplicateModal.message}
+        onClose={() => setDuplicateModal({ open: false, username: '' })}
       />
     </div>
   );

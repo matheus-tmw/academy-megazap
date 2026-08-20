@@ -26,6 +26,8 @@ import {
 import { UserProfile, UserStatus } from '../../types/backend';
 import { formatDisplayIdentifier } from '../../utils/userIdentifiers';
 import { PasswordResetModal } from '../../components/PasswordResetModal';
+import { UserDetailModal } from '../../components/UserDetailModal';
+import { UserAlreadyExistsModal } from '../../components/UserAlreadyExistsModal';
 
 export const PartnerTeamView: React.FC = () => {
   const { currentPartner, currentUser } = useAcademy();
@@ -37,6 +39,11 @@ export const PartnerTeamView: React.FC = () => {
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [userToReset, setUserToReset] = useState<UserProfile | null>(null);
+  const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
+  const [duplicateModal, setDuplicateModal] = useState<{ open: boolean; username: string; message?: string }>({
+    open: false,
+    username: ''
+  });
   const [formName, setFormName] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formLoading, setFormLoading] = useState(false);
@@ -110,7 +117,15 @@ export const PartnerTeamView: React.FC = () => {
       setFormEmail('');
       showFeedback(`Funcionário "${formName}" (${formatDisplayIdentifier(formEmail)}) cadastrado com sucesso!`);
     } catch (err: any) {
-      setFormError(err.message || 'Erro ao cadastrar funcionário.');
+      if (err.name === 'UserAlreadyExistsError' || err.username || err.message?.includes('já está cadastrado') || err.message?.includes('já pertence')) {
+        setDuplicateModal({
+          open: true,
+          username: err.username || formatDisplayIdentifier(formEmail),
+          message: err.message
+        });
+      } else {
+        setFormError(err.message || 'Erro ao cadastrar funcionário.');
+      }
     }
     setFormLoading(false);
   };
@@ -253,10 +268,15 @@ export const PartnerTeamView: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                      <span>Progresso nas Trilhas</span>
+                  {/* Progress Bar & Clickable Detail trigger */}
+                  <div 
+                    onClick={() => setSelectedUserForModal(member)}
+                    className="my-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 space-y-1.5 cursor-pointer transition-colors group"
+                  >
+                    <div className="flex items-center justify-between text-[11px] font-medium">
+                      <span className="text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 font-bold transition-colors">
+                        Progresso nas Trilhas →
+                      </span>
                       <span className="font-bold text-slate-800 dark:text-slate-200">{idx === 0 ? '88%' : '60%'}</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -270,25 +290,34 @@ export const PartnerTeamView: React.FC = () => {
 
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                   <button
-                    onClick={() => setUserToReset(member)}
-                    className="py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-                    title="Definir / resetar credenciais"
+                    onClick={() => setSelectedUserForModal(member)}
+                    className="py-1.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-emerald-200 dark:border-emerald-800"
                   >
-                    <KeyRound className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Redefinir Acesso</span>
+                    <GraduationCap className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Detalhes das Aulas</span>
                   </button>
 
-                  <button
-                    onClick={() => handleToggleStatus(member)}
-                    className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-                      member.status === 'active'
-                        ? 'border-rose-200 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600'
-                        : 'border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-600'
-                    }`}
-                    title={member.status === 'active' ? 'Desativar acesso' : 'Reativar acesso'}
-                  >
-                    <Power className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setUserToReset(member)}
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium transition-colors cursor-pointer"
+                      title="Definir / resetar credenciais"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-slate-400" />
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleStatus(member)}
+                      className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                        member.status === 'active'
+                          ? 'border-rose-200 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600'
+                          : 'border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-600'
+                      }`}
+                      title={member.status === 'active' ? 'Desativar acesso' : 'Reativar acesso'}
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -298,8 +327,11 @@ export const PartnerTeamView: React.FC = () => {
 
       {/* Modal: Create Employee */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setCreateModalOpen(false); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Users className="w-4 h-4 text-emerald-500" />
@@ -389,6 +421,27 @@ export const PartnerTeamView: React.FC = () => {
           showFeedback(msg);
           loadTeam();
         }}
+      />
+
+      {/* User Progress and Detail Modal */}
+      <UserDetailModal
+        user={selectedUserForModal}
+        isOpen={Boolean(selectedUserForModal)}
+        onClose={() => setSelectedUserForModal(null)}
+        partnerName={currentPartner?.displayName}
+        onResetPassword={(u) => {
+          setSelectedUserForModal(null);
+          setUserToReset(u);
+        }}
+        onToggleStatus={handleToggleStatus}
+      />
+
+      {/* Duplicate Username Modal */}
+      <UserAlreadyExistsModal
+        isOpen={duplicateModal.open}
+        username={duplicateModal.username}
+        customMessage={duplicateModal.message}
+        onClose={() => setDuplicateModal({ open: false, username: '' })}
       />
     </div>
   );

@@ -144,6 +144,7 @@ export interface AcademyContextType {
   sendPasswordReset: (email: string) => Promise<void>;
   switchDemoRole: (role: UserRole) => void;
   updateCurrentUserProfile: (name: string, photoURL?: string) => Promise<void>;
+  clearMustChangePasswordFlag: () => void;
 
   // Backwards compatibility userProfile for visual components
   userProfile: {
@@ -837,6 +838,16 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
+  const clearMustChangePasswordFlag = () => {
+    if (currentUser) {
+      const updated = { ...currentUser, mustChangePassword: false };
+      setCurrentUser(updated);
+      if (realUserProfile) {
+        setRealUserProfile({ ...realUserProfile, mustChangePassword: false });
+      }
+    }
+  };
+
   // Current track and lesson objects
   const currentTrack = useMemo(() => {
     return tracks.find(t => t.id === selectedTrackId) || tracks[0] || TRACKS_DATA[0];
@@ -1181,6 +1192,7 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
         sendPasswordReset,
         switchDemoRole,
         updateCurrentUserProfile,
+        clearMustChangePasswordFlag,
         userProfile: userProfileFormatted
       }}
     >

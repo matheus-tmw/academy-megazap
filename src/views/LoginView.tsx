@@ -151,8 +151,11 @@ export const LoginView: React.FC = () => {
 
       {/* Password Reset Modal */}
       {resetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setResetModalOpen(false); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <KeyRound className="w-5 h-5 text-sky-500" />
               <span>Redefinir Senha de Acesso</span>

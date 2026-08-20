@@ -371,6 +371,17 @@
         }
       },
       "required": ["actorUid", "actorRole", "action", "targetType", "targetId", "createdAt"]
+    },
+    "UsernameIndex": {
+      "title": "UsernameIndex",
+      "description": "Unique username lock index to enforce absolute login uniqueness in database.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
     }
   },
   "firestore": {
@@ -381,6 +392,10 @@
     "/partners/{partnerId}": {
       "schema": "Partner",
       "description": "Stores White Label partner company accounts and licensing metadata."
+    },
+    "/usernames/{usernameId}": {
+      "schema": "UsernameIndex",
+      "description": "Enforces strict database-level unique lock on user login identifiers."
     },
     "/users/{uid}": {
       "schema": "User",

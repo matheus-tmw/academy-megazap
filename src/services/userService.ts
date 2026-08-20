@@ -16,8 +16,24 @@ import { UserProfile, UserRole, UserStatus } from '../types/backend';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { logAuditEvent } from './auditService';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { normalizeAuthIdentifier } from '../utils/userIdentifiers';
+import { normalizeAuthIdentifier, formatDisplayIdentifier } from '../utils/userIdentifiers';
 import { provisionFirebaseAuthUser, generateTemporaryPassword } from './authAdminHelper';
+
+/**
+ * Custom Error thrown when attempting to register or update a user with a duplicate username/login.
+ */
+export class UserAlreadyExistsError extends Error {
+  public readonly username: string;
+  constructor(rawUsername: string, customMessage?: string) {
+    const formatted = formatDisplayIdentifier(rawUsername);
+    super(
+      customMessage ||
+        `O nome de usuário "${formatted}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
+    );
+    this.name = 'UserAlreadyExistsError';
+    this.username = formatted;
+  }
+}
 
 /**
  * Service for Managing Users and Partner Relations.
@@ -169,7 +185,7 @@ export async function getUser(uid: string): Promise<UserProfile | null> {
 /**
  * Administrative User Creation Flow
  * Supports standard emails (e.g. 'matheus@empresa.com') OR custom usernames (e.g. 'matheus.parceiro').
- * Validates caller privileges before creating user profile in Firestore.
+ * Enforces ABSOLUTE UNICITY: Never creates, edits, or overwrites an existing user document when duplicate username is provided.
  */
 export async function createAdministrativeUser(params: {
   name: string;
@@ -183,12 +199,16 @@ export async function createAdministrativeUser(params: {
   let targetRole = params.role;
   let targetPartnerId = params.partnerId;
 
-  // Normalize username or email
+  if (!email || !email.trim()) {
+    throw new Error('Informe um nome de usuário ou e-mail válido.');
+  }
+
+  // Normalize username or email (trims leading/trailing spaces, converts to lowercase)
   const normalizedEmail = normalizeAuthIdentifier(email);
+  const rawDisplayUsername = formatDisplayIdentifier(normalizedEmail);
 
   // Security Verification: Partner Admin scope enforcement
   if (callerProfile?.role === 'partner_admin') {
-    // Partner Admin can ONLY create partner_user and MUST use their own partnerId
     if (targetRole !== 'partner_user') {
       throw new Error('Permissão negada: Partner Admin só pode criar usuários do nível Partner User.');
     }
@@ -205,23 +225,36 @@ export async function createAdministrativeUser(params: {
     throw new Error('Parceiro é obrigatório para usuários Partner Admin e Partner User.');
   }
 
-  // Check if a document with this email already exists in Firestore
-  let existingDocId: string | null = null;
-  try {
-    const qEmail = query(collection(db, 'users'), where('email', '==', normalizedEmail));
-    const snapEmail = await getDocs(qEmail);
-    if (!snapEmail.empty) {
-      existingDocId = snapEmail.docs[0].id;
-    }
-  } catch (e) {
-    console.warn('Check existing email notice:', e);
+  // STEP 1: Strict Check in Firestore for existing username index or user document
+  const usernameDocRef = doc(db, 'usernames', normalizedEmail);
+  const usernameSnap = await getDoc(usernameDocRef).catch(() => null);
+  if (usernameSnap && usernameSnap.exists()) {
+    throw new UserAlreadyExistsError(
+      rawDisplayUsername,
+      `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
+    );
   }
 
-  // Provision in Firebase Authentication with standard initial password 'Acesso01'
+  const qEmail = query(collection(db, 'users'), where('email', '==', normalizedEmail));
+  const snapEmail = await getDocs(qEmail).catch(() => null);
+  if (snapEmail && !snapEmail.empty) {
+    throw new UserAlreadyExistsError(
+      rawDisplayUsername,
+      `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
+    );
+  }
+
+  // STEP 2: Provision in Firebase Authentication
   const provisionResult = await provisionFirebaseAuthUser(normalizedEmail, 'Acesso01');
 
-  // Determine User ID (prefer Auth UID or existing doc ID)
-  const userUid = provisionResult.uid || existingDocId || doc(collection(db, 'users')).id;
+  if (provisionResult.alreadyExists || !provisionResult.success) {
+    throw new UserAlreadyExistsError(
+      rawDisplayUsername,
+      `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
+    );
+  }
+
+  const userUid = provisionResult.uid || doc(collection(db, 'users')).id;
   const userRef = doc(db, 'users', userUid);
 
   const newUser: UserProfile = {
@@ -243,12 +276,27 @@ export async function createAdministrativeUser(params: {
   };
 
   try {
-    await setDoc(userRef, newUser, { merge: true });
-    // Clean up older duplicate document if ID changed
-    if (existingDocId && existingDocId !== userUid) {
-      deleteDoc(doc(db, 'users', existingDocId)).catch(() => {});
+    // Write username lock index FIRST (will be blocked by security rules if doc exists)
+    await setDoc(usernameDocRef, {
+      uid: userUid,
+      email: normalizedEmail,
+      createdAt: serverTimestamp(),
+      createdBy: callerProfile?.uid || auth.currentUser?.uid || 'admin'
+    });
+
+    // Write user profile (create mode without merge to prevent overwriting existing record!)
+    await setDoc(userRef, newUser);
+  } catch (error: any) {
+    if (
+      error?.message?.includes('already-exists') || 
+      error?.code === 'already-exists' || 
+      error?.message?.includes('PERMISSION_DENIED')
+    ) {
+      throw new UserAlreadyExistsError(
+        rawDisplayUsername,
+        `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
+      );
     }
-  } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, `users/${userUid}`);
   }
 
@@ -279,6 +327,7 @@ export async function updateUserAdministrative(
   uid: string,
   data: {
     name?: string;
+    email?: string;
     role?: UserRole;
     partnerId?: string | null;
     status?: UserStatus;
@@ -286,7 +335,14 @@ export async function updateUserAdministrative(
   callerProfile?: UserProfile | null
 ): Promise<void> {
   const docRef = doc(db, 'users', uid);
-  
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) {
+    throw new Error('Usuário não encontrado.');
+  }
+
+  const existingUserData = snap.data() as UserProfile;
+  const currentEmail = existingUserData.email;
+
   // Security Checks
   if (callerProfile?.role === 'partner_admin') {
     // Partner Admin cannot elevate anyone to super_admin or change partnerId
@@ -298,9 +354,45 @@ export async function updateUserAdministrative(
     }
   }
 
+  let newNormalizedEmail = currentEmail;
+  if (data.email && data.email.trim()) {
+    newNormalizedEmail = normalizeAuthIdentifier(data.email);
+    const rawDisplayUsername = formatDisplayIdentifier(newNormalizedEmail);
+
+    // If changing username/email, check if it already belongs to another user!
+    if (newNormalizedEmail !== currentEmail) {
+      // Check username reservation index
+      const newUsernameRef = doc(db, 'usernames', newNormalizedEmail);
+      const newUsernameSnap = await getDoc(newUsernameRef).catch(() => null);
+      if (newUsernameSnap && newUsernameSnap.exists()) {
+        const ownerUid = newUsernameSnap.data()?.uid;
+        if (ownerUid && ownerUid !== uid) {
+          throw new UserAlreadyExistsError(
+            rawDisplayUsername,
+            `O nome de usuário "${rawDisplayUsername}" já pertence a outro cadastro. Escolha outro nome de usuário.`
+          );
+        }
+      }
+
+      // Check users collection query
+      const qOther = query(collection(db, 'users'), where('email', '==', newNormalizedEmail));
+      const snapOther = await getDocs(qOther).catch(() => null);
+      if (snapOther && !snapOther.empty) {
+        const matchingDoc = snapOther.docs.find(d => d.id !== uid);
+        if (matchingDoc) {
+          throw new UserAlreadyExistsError(
+            rawDisplayUsername,
+            `O nome de usuário "${rawDisplayUsername}" já pertence a outro cadastro. Escolha outro nome de usuário.`
+          );
+        }
+      }
+    }
+  }
+
   try {
     const updatePayload: Record<string, any> = {
       ...data,
+      email: newNormalizedEmail,
       updatedAt: serverTimestamp(),
       updatedBy: callerProfile?.uid || auth.currentUser?.uid || 'admin'
     };
@@ -309,23 +401,20 @@ export async function updateUserAdministrative(
       updatePayload.partnerId = null;
     }
 
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      await updateDoc(docRef, updatePayload);
-      const userEmail = snap.data()?.email;
-      if (userEmail) {
-        const qOther = query(collection(db, 'users'), where('email', '==', userEmail));
-        const otherSnap = await getDocs(qOther).catch(() => null);
-        if (otherSnap) {
-          otherSnap.docs.forEach(d => {
-            if (d.id !== uid) deleteDoc(d.ref).catch(() => {});
-          });
-        }
-      }
-    } else {
-      await setDoc(docRef, updatePayload, { merge: true });
+    await updateDoc(docRef, updatePayload);
+
+    // If email/username changed, update username reservation index
+    if (newNormalizedEmail !== currentEmail) {
+      deleteDoc(doc(db, 'usernames', currentEmail)).catch(() => {});
+      setDoc(doc(db, 'usernames', newNormalizedEmail), {
+        uid,
+        email: newNormalizedEmail,
+        updatedAt: serverTimestamp(),
+        updatedBy: callerProfile?.uid || auth.currentUser?.uid || 'admin'
+      }).catch(() => {});
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof UserAlreadyExistsError) throw error;
     handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
   }
 
@@ -336,7 +425,7 @@ export async function updateUserAdministrative(
     action: 'USER_UPDATED',
     targetType: 'user',
     targetId: uid,
-    metadata: data
+    metadata: { ...data, email: newNormalizedEmail }
   });
 }
 
@@ -347,6 +436,13 @@ export async function deleteUserAdministrative(uid: string, callerProfile?: User
 
   const docRef = doc(db, 'users', uid);
   try {
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const email = snap.data()?.email;
+      if (email) {
+        deleteDoc(doc(db, 'usernames', email)).catch(() => {});
+      }
+    }
     await deleteDoc(docRef);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `users/${uid}`);

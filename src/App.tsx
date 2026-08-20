@@ -79,7 +79,8 @@ const MainContent: React.FC = () => {
     isPartnerAdmin,
     isPartnerUser,
     authLoading,
-    currentUser
+    currentUser,
+    clearMustChangePasswordFlag
   } = useAcademy();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -188,9 +189,7 @@ const MainContent: React.FC = () => {
       <FirstLoginPasswordModal
         isOpen={Boolean(currentUser?.mustChangePassword)}
         onSuccess={() => {
-          if (currentUser) {
-            currentUser.mustChangePassword = false;
-          }
+          clearMustChangePasswordFlag();
         }}
       />
     </div>

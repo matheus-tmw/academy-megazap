@@ -20,6 +20,7 @@ import {
 import { listPartners, listenToPartners, createPartner, updatePartner, updatePartnerStatus } from '../../services/partnerService';
 import { getUsersByPartner } from '../../services/userService';
 import { Partner, PartnerStatus, UserProfile } from '../../types/backend';
+import { UserDetailModal } from '../../components/UserDetailModal';
 
 export const AdminPartnersView: React.FC = () => {
   const { navigateTo } = useAcademy();
@@ -35,6 +36,7 @@ export const AdminPartnersView: React.FC = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [partnerUsers, setPartnerUsers] = useState<UserProfile[]>([]);
+  const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
 
   // Form States
   const [formName, setFormName] = useState('');
@@ -336,8 +338,11 @@ export const AdminPartnersView: React.FC = () => {
 
       {/* Modal: Create Partner */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setCreateModalOpen(false); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-sky-500" />
@@ -435,8 +440,11 @@ export const AdminPartnersView: React.FC = () => {
 
       {/* Modal: Edit Partner */}
       {editModalOpen && selectedPartner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setEditModalOpen(false); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-sky-500" />
@@ -530,8 +538,11 @@ export const AdminPartnersView: React.FC = () => {
 
       {/* Modal: Partner Detail */}
       {detailModalOpen && selectedPartner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setDetailModalOpen(false); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-400 font-bold flex items-center justify-center">
@@ -569,21 +580,41 @@ export const AdminPartnersView: React.FC = () => {
                 <Users className="w-3.5 h-3.5 text-sky-500" />
                 <span>Colaboradores Vinculados ao Tenant</span>
               </h3>
-              <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
                 {partnerUsers.length > 0 ? (
                   partnerUsers.map(u => (
-                    <div key={u.uid} className="p-2.5 flex items-center justify-between text-xs">
-                      <div>
-                        <div className="font-semibold text-slate-900 dark:text-white">{u.name}</div>
-                        <div className="text-[11px] text-slate-400">{u.email}</div>
+                    <div 
+                      key={u.uid} 
+                      onClick={() => setSelectedUserForModal(u)}
+                      className="p-3 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src={u.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}`}
+                          alt=""
+                          className="w-7 h-7 rounded-lg object-cover border border-slate-200 dark:border-slate-700"
+                        />
+                        <div>
+                          <div className="font-semibold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors flex items-center gap-1.5">
+                            <span>{u.name}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">{u.email}</div>
+                        </div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                        u.role === 'partner_admin'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                          : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
-                      }`}>
-                        {u.role === 'partner_admin' ? 'Admin' : 'Funcionário'}
-                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          u.role === 'partner_admin'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                            : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                        }`}>
+                          {u.role === 'partner_admin' ? 'Admin' : 'Funcionário'}
+                        </span>
+                        
+                        <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline">
+                          Ver Detalhes →
+                        </span>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -597,7 +628,7 @@ export const AdminPartnersView: React.FC = () => {
             <div className="flex justify-end pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
               <button
                 onClick={() => setDetailModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold"
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold cursor-pointer"
               >
                 Fechar
               </button>
@@ -605,6 +636,14 @@ export const AdminPartnersView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* User Detail & Progress Modal */}
+      <UserDetailModal
+        user={selectedUserForModal}
+        isOpen={Boolean(selectedUserForModal)}
+        onClose={() => setSelectedUserForModal(null)}
+        partnerName={selectedPartner?.displayName}
+      />
     </div>
   );
 };

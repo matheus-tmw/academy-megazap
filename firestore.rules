@@ -166,5 +166,13 @@ service cloud.firestore {
     match /test/{docId} {
       allow read, write: if true;
     }
+
+    // 8. Username Lock Index (Strict Database-Level Uniqueness Enforcement)
+    match /usernames/{usernameId} {
+      allow read: if true;
+      allow create: if isSignedIn() && !exists(/databases/$(database)/documents/usernames/$(usernameId));
+      allow update: if false; // Locks cannot be overwritten
+      allow delete: if isSuperAdmin() || isSignedIn();
+    }
   }
 }

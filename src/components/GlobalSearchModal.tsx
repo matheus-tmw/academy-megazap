@@ -98,7 +98,14 @@ export const GlobalSearchModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-20 px-4">
+    <div 
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          setIsSearchModalOpen(false);
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-20 px-4 cursor-pointer"
+    >
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
@@ -106,7 +113,10 @@ export const GlobalSearchModal: React.FC = () => {
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80vh] z-10 animate-in fade-in zoom-in-95 duration-150">
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80vh] z-10 animate-in fade-in zoom-in-95 duration-150 cursor-default"
+      >
         {/* Search Input Bar */}
         <div className="flex items-center px-4 py-3.5 border-b border-slate-100 bg-slate-50/50">
           <Search className="w-5 h-5 text-sky-600 mr-3 shrink-0" />

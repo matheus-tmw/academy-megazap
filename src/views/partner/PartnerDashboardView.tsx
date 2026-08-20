@@ -15,11 +15,13 @@ import {
 } from 'lucide-react';
 import { getUsersByPartner } from '../../services/userService';
 import { UserProfile } from '../../types/backend';
+import { UserDetailModal } from '../../components/UserDetailModal';
 
 export const PartnerDashboardView: React.FC = () => {
   const { currentPartner, navigateTo } = useAcademy();
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     async function loadTeam() {
@@ -241,10 +243,10 @@ export const PartnerDashboardView: React.FC = () => {
                   </td>
                   <td className="py-3.5 text-right">
                     <button
-                      onClick={() => navigateTo('partner-team')}
-                      className="text-xs text-sky-600 dark:text-sky-400 hover:underline font-semibold"
+                      onClick={() => setSelectedUserForModal(user)}
+                      className="text-xs text-sky-600 dark:text-sky-400 hover:underline font-semibold cursor-pointer"
                     >
-                      Detalhes
+                      Ver Detalhes
                     </button>
                   </td>
                 </tr>
@@ -253,6 +255,14 @@ export const PartnerDashboardView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* User Progress and Detail Modal */}
+      <UserDetailModal
+        user={selectedUserForModal}
+        isOpen={Boolean(selectedUserForModal)}
+        onClose={() => setSelectedUserForModal(null)}
+        partnerName={currentPartner?.displayName}
+      />
     </div>
   );
 };

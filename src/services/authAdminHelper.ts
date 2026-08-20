@@ -53,7 +53,11 @@ export async function provisionFirebaseAuthUser(
     }
 
     if (error?.code === 'auth/email-already-in-use') {
-      return { success: true, alreadyExists: true };
+      return { 
+        success: false, 
+        alreadyExists: true, 
+        error: 'Este nome de usuário ou e-mail já está cadastrado no sistema.' 
+      };
     }
 
     return { 
