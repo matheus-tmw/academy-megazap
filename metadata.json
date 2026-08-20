@@ -1,5 +1,5 @@
 {
-  "name": "MegaZap Academy",
+  "name": "Academia MegaZap",
   "description": "Plataforma de treinamento e capacitação oficial para parceiros White Label MegaZap.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
