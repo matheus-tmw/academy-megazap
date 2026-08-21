@@ -110,12 +110,15 @@ export const AdminDashboardView: React.FC = () => {
     loadData();
   }, []);
 
-  const totalPartners = partners.length || 2;
-  const totalUsers = users.length || 4;
-  const activeUsers = users.filter(u => u.status === 'active').length || totalUsers;
+  const totalPartners = partners.length;
+  const totalUsers = users.length;
+  const activeUsers = users.filter(u => u.status === 'active').length;
   const disabledUsers = users.filter(u => u.status === 'inactive' || u.status === 'blocked').length;
-  const averageProgress = 68;
-  const totalCertificates = 14;
+  const studentUsers = users.filter(u => u.role !== 'super_admin');
+  const averageProgress = studentUsers.length > 0 
+    ? Math.round(studentUsers.reduce((acc, u) => acc + (u.progressPercentage || 0), 0) / studentUsers.length)
+    : 0;
+  const totalCertificates = users.filter(u => (u.progressPercentage || 0) === 100).length;
 
   const recentUsers = users.slice(0, 5);
 
@@ -245,11 +248,11 @@ export const AdminDashboardView: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 6: Certificados */}
+        {/* Card 6: Certificados Master */}
         <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs transition-colors">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">Certificados</span>
-            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
+            <span className="text-xs font-semibold">Certificados Master</span>
+            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
               <GraduationCap className="w-4 h-4" />
             </div>
           </div>
@@ -257,7 +260,7 @@ export const AdminDashboardView: React.FC = () => {
             {totalCertificates}
           </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-            Emitidos com sucesso
+            Alunos com 100% de Conclusão
           </div>
         </div>
       </div>
@@ -368,31 +371,41 @@ export const AdminDashboardView: React.FC = () => {
             </div>
 
             <div className="space-y-3.5">
-              {partners.map((partner, idx) => (
-                <div
-                  key={partner.id}
-                  className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60"
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="font-semibold text-slate-900 dark:text-white text-xs">
-                      {partner.displayName}
+              {partners.map((partner) => {
+                const partnerMembers = users.filter(u => u.partnerId === partner.id);
+                const memberCount = partnerMembers.length;
+                const partnerAvg = memberCount > 0
+                  ? Math.round(partnerMembers.reduce((acc, u) => acc + (u.progressPercentage || 0), 0) / memberCount)
+                  : 0;
+
+                return (
+                  <div
+                    key={partner.id}
+                    className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="font-semibold text-slate-900 dark:text-white text-xs">
+                        {partner.displayName}
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                        {partner.code}
+                      </span>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      {partner.code}
-                    </span>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                      <span>Equipe: {memberCount} {memberCount === 1 ? 'aluno' : 'alunos'}</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {memberCount > 0 ? `${partnerAvg}% concluído` : '0%'}
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-sky-500 rounded-full"
+                        style={{ width: `${partnerAvg}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-2">
-                    <span>Equipe: 4 alunos</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">{idx === 0 ? '78%' : '62%'} concluído</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-sky-500 rounded-full"
-                      style={{ width: idx === 0 ? '78%' : '62%' }}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

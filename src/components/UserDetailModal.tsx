@@ -189,8 +189,8 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               <div className="text-lg font-bold text-white mt-0.5">{completedLessonsCount} / {totalLessonsCount}</div>
             </div>
             <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
-              <div className="text-[10px] uppercase font-semibold text-slate-400">Certificados</div>
-              <div className="text-lg font-bold text-purple-400 mt-0.5">{certificates.length} Conquistados</div>
+              <div className="text-[10px] uppercase font-semibold text-slate-400">Certificado Master</div>
+              <div className="text-lg font-bold text-amber-400 mt-0.5">{overallPercent === 100 ? '100% (Emitido)' : `${overallPercent}% (Pendente)`}</div>
             </div>
             <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
               <div className="text-[10px] uppercase font-semibold text-slate-400">Status Acesso</div>
@@ -222,7 +222,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
             }`}
           >
             <Award className="w-4 h-4" />
-            <span>Certificados ({certificates.length})</span>
+            <span>Certificado Master</span>
           </button>
 
           <button
@@ -415,48 +415,54 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Certificados Oficiais Emitidos
+                  Status do Certificado Master
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Histórico de certificações concluídas pelo colaborador nesta conta.
+                  O certificado definitivo de especialização exige 100% de conclusão de todas as trilhas oficiais.
                 </p>
               </div>
 
-              {certificates.length === 0 ? (
-                <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 text-xs">
-                  Nenhum certificado emitido até o momento. O colaborador precisa concluir 100% de uma trilha.
+              {overallPercent === 100 ? (
+                <div className="p-5 rounded-2xl border-2 border-amber-300 dark:border-amber-700 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-amber-500/10 dark:from-amber-950/40 dark:to-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-3.5 rounded-2xl bg-amber-500 text-white shadow-md shrink-0">
+                      <Award className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100 rounded">
+                        100% Concluído • Válido
+                      </span>
+                      <h4 className="font-extrabold text-slate-900 dark:text-white text-sm mt-1">
+                        Certificado de Especialista MegaZap White Label
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Código: MZ-MASTER-2026-{(user.uid || '2026').substring(0, 6).toUpperCase()}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 shrink-0">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Apto para Emissão</span>
+                  </span>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-3">
-                  {certificates.map(cert => (
+                <div className="p-6 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-center space-y-3">
+                  <Award className="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto" />
+                  <div>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                      Certificado Em Progresso ({overallPercent}%)
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+                      O colaborador assistiu <strong>{completedLessonsCount} de {totalLessonsCount} aulas</strong>. Faltam {totalLessonsCount - completedLessonsCount} aulas para liberar a emissão do certificado.
+                    </p>
+                  </div>
+                  <div className="w-full max-w-xs mx-auto h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div 
-                      key={cert.id}
-                      className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/40 dark:to-slate-900 flex items-center justify-between gap-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-3 rounded-xl bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400 shrink-0">
-                          <GraduationCap className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900 dark:text-white text-xs">
-                            {cert.courseTitle}
-                          </div>
-                          <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                            Código: {cert.certificateNumber}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                          <CheckCircle2 className="w-3 h-3" /> Válido
-                        </span>
-                        <div className="text-[10px] text-slate-400 mt-1">
-                          Emitido para {cert.partnerId ? displayPartnerName : 'White Label'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                      className="h-full bg-amber-500 rounded-full"
+                      style={{ width: `${overallPercent}%` }}
+                    />
+                  </div>
                 </div>
               )}
             </div>

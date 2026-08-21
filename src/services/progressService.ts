@@ -23,6 +23,12 @@ import {
  * Subcollection: users/{uid}/progress/{lessonId}
  */
 
+import { ALL_LESSONS } from '../data/coursesData';
+
+// Simple in-memory cache for progress maps (expires in 2 minutes)
+const progressCache = new Map<string, { data: Record<string, ProgressRecord>; timestamp: number }>();
+const CACHE_TTL_MS = 2 * 60 * 1000;
+
 export async function saveLessonProgress(
   uid: string, 
   params: {
@@ -35,6 +41,9 @@ export async function saveLessonProgress(
 ): Promise<void> {
   const { lessonId, courseId, moduleId, progressPercent, completed = false } = params;
   const progressDocRef = doc(db, 'users', uid, 'progress', lessonId);
+
+  // Invalidate cache on write
+  progressCache.delete(uid);
 
   try {
     logFirestoreRead('saveLessonProgress (check existing)', `users/${uid}/progress/${lessonId}`, 1);
@@ -66,13 +75,36 @@ export async function saveLessonProgress(
         updatedAt: serverTimestamp(),
       });
     }
+
+    // Sync calculated progress percentage to parent user document for fast zero-read team lists
+    try {
+      const updatedMap = await getUserProgress(uid, true);
+      const totalLessons = ALL_LESSONS.length || 1;
+      const completedCount = Object.values(updatedMap || {}).filter(p => p.completed).length;
+      const pct = Math.min(100, Math.round((completedCount / totalLessons) * 100));
+
+      await updateDoc(doc(db, 'users', uid), {
+        progressPercentage: pct,
+        completedLessonsCount: completedCount,
+        updatedAt: serverTimestamp()
+      });
+    } catch {
+      // ignore sync errors
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `users/${uid}/progress/${lessonId}`);
   }
 }
 
-export async function getUserProgress(uid: string): Promise<Record<string, ProgressRecord>> {
+export async function getUserProgress(uid: string, bypassCache = false): Promise<Record<string, ProgressRecord>> {
   const path = `users/${uid}/progress`;
+  const cached = progressCache.get(uid);
+  const now = Date.now();
+
+  if (!bypassCache && cached && (now - cached.timestamp < CACHE_TTL_MS)) {
+    return cached.data;
+  }
+
   try {
     const snapshot = await getDocs(collection(db, 'users', uid, 'progress'));
     logFirestoreRead('getUserProgress', path, snapshot.docs.length);
@@ -80,9 +112,12 @@ export async function getUserProgress(uid: string): Promise<Record<string, Progr
     snapshot.docs.forEach(docSnap => {
       progressMap[docSnap.id] = docSnap.data() as ProgressRecord;
     });
+
+    progressCache.set(uid, { data: progressMap, timestamp: now });
     return progressMap;
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
+    return cached?.data || {};
   }
 }
 

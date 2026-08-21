@@ -170,17 +170,15 @@ export const TrilhaDetalhesView: React.FC = () => {
               <span>{trackProgress.percentage > 0 ? 'Continuar treinamento' : 'Iniciar treinamento'}</span>
             </button>
 
-            {currentTrack.certificateAvailable && (
-              <button
-                type="button"
-                id="trilha-ver-certificado-btn"
-                onClick={() => openCertificate(currentTrack.id)}
-                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors cursor-pointer"
-              >
-                <Award className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                <span>Visualizar Certificado Oficial</span>
-              </button>
-            )}
+            <button
+              type="button"
+              id="trilha-ver-certificado-btn"
+              onClick={() => navigateTo('certificados')}
+              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors cursor-pointer"
+            >
+              <Award className="w-4 h-4 text-amber-500" />
+              <span>Certificado de Formação Completa</span>
+            </button>
           </div>
         </div>
       </div>

@@ -112,7 +112,8 @@ export interface AcademyContextType {
   setActiveCertificate: (cert: Certificate | null) => void;
   isCertificateModalOpen: boolean;
   setIsCertificateModalOpen: (open: boolean) => void;
-  openCertificate: (trackId: string) => void;
+  openCertificate: (trackId?: string) => void;
+  openMasterCertificate: () => void;
   
   // Notifications
   notifications: NotificationItem[];
@@ -1185,23 +1186,24 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
     return `${mins}min`;
   }, [totalStudiedSeconds]);
 
-  // Certificate opener
-  const openCertificate = (trackId: string) => {
-    const track = tracks.find(t => t.id === trackId) || rawTracks.find(t => t.id === trackId);
-    if (!track) return;
-    
+  // Master Certificate opener
+  const openMasterCertificate = () => {
     setActiveCertificate({
-      id: `CERT-MZ-${trackId.toUpperCase()}-2026`,
-      trackId: track.id,
-      trackTitle: track.title,
-      title: track.certificateName,
-      issueDate: '14 de agosto de 2026',
-      verificationCode: `MZ-WL-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
-      hoursCount: track.estimatedHours,
-      studentName: currentUser?.name || 'Matheus Barros',
-      partnerCompany: currentPartner?.displayName || 'Ultrafox'
+      id: `CERT-MZ-MASTER-2026`,
+      trackId: 'master',
+      trackTitle: 'Formação Completa MegaZap White Label',
+      title: 'Certificado de Especialista MegaZap White Label',
+      issueDate: '21 de agosto de 2026',
+      verificationCode: `MZ-MASTER-${(currentUser?.uid || '2026').substring(0, 6).toUpperCase()}`,
+      hoursCount: '16 Horas de Formação Prática',
+      studentName: currentUser?.name || userProfileFormatted.name || 'Aluno MegaZap',
+      partnerCompany: currentPartner?.displayName || userProfileFormatted.company || 'MegaZap White Label'
     });
     setIsCertificateModalOpen(true);
+  };
+
+  const openCertificate = (trackId?: string) => {
+    openMasterCertificate();
   };
 
   // Notifications
@@ -1288,6 +1290,7 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
         isCertificateModalOpen,
         setIsCertificateModalOpen,
         openCertificate,
+        openMasterCertificate,
         notifications,
         unreadNotificationsCount,
         markNotificationAsRead,

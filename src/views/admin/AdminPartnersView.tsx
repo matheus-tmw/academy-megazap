@@ -93,6 +93,7 @@ export const AdminPartnersView: React.FC = () => {
 
   const openDetailModal = async (partner: Partner) => {
     setSelectedPartner(partner);
+    setPartnerUsers([]);
     setDetailModalOpen(true);
     try {
       const users = await getUsersByPartner(partner.id);
@@ -567,11 +568,17 @@ export const AdminPartnersView: React.FC = () => {
               </div>
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
                 <div className="text-[10px] text-slate-400 uppercase font-semibold">Usuários Cadastrados</div>
-                <div className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{partnerUsers.length || 4} alunos</div>
+                <div className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">
+                  {partnerUsers.length} {partnerUsers.length === 1 ? 'aluno' : 'alunos'}
+                </div>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
                 <div className="text-[10px] text-slate-400 uppercase font-semibold">Progresso Médio</div>
-                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">78% concluído</div>
+                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {partnerUsers.length > 0
+                    ? `${Math.round(partnerUsers.reduce((acc, u) => acc + (u.progressPercentage || 0), 0) / partnerUsers.length)}% concluído`
+                    : '0% (sem alunos)'}
+                </div>
               </div>
             </div>
 

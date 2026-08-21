@@ -109,6 +109,9 @@ export const PartnerTeamView: React.FC = () => {
       try {
         const results = await Promise.all(
           members.map(async (u) => {
+            if (u.progressPercentage !== undefined) {
+              return [u.uid, u.progressPercentage] as [string, number];
+            }
             try {
               const prog = await getUserProgress(u.uid);
               const completedCount = Object.values(prog || {}).filter(p => p.completed).length;

@@ -31,6 +31,8 @@ export interface UserProfile {
   createdAt: Timestamp | string;
   updatedAt: Timestamp | string;
   lastLoginAt?: Timestamp | string | null;
+  progressPercentage?: number;
+  completedLessonsCount?: number;
   createdBy?: string;
   updatedBy?: string;
 }

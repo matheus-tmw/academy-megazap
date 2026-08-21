@@ -125,59 +125,59 @@ export const CertificateModal: React.FC = () => {
             </div>
 
             <div className="mb-2">
-              <span className="text-[11px] uppercase tracking-[0.25em] font-bold text-sky-700">
-                Certificado de Conclusão Profissional
+              <span className="text-[11px] uppercase tracking-[0.25em] font-bold text-sky-700 dark:text-sky-800">
+                Certificado Oficial de Formação Completa & Especialização
               </span>
             </div>
 
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mb-4">
-              MegaZap Academy • White Label
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mb-3">
+              MegaZap Academy • Capacitação White Label
             </h2>
 
-            <p className="text-xs text-slate-500 max-w-lg mx-auto mb-5 leading-relaxed">
-              Certificamos que o profissional abaixo completou com êxito todas as etapas, módulos teóricos e práticos da trilha de capacitação oficial:
+            <p className="text-xs text-slate-500 max-w-lg mx-auto mb-4 leading-relaxed">
+              Certificamos que o(a) profissional abaixo completou com êxito <strong>100% de todas as trilhas de treinamento oficial</strong> da plataforma MegaZap, alcançando o nível máximo de capacitação técnica, operacional e comercial:
             </p>
 
             {/* Student Name */}
-            <div className="my-5">
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight underline decoration-sky-500 decoration-2 underline-offset-8">
+            <div className="my-4">
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight underline decoration-amber-500 decoration-2 underline-offset-8">
                 {activeCertificate.studentName || userProfile.name}
               </h1>
               <p className="text-xs text-slate-500 font-medium mt-2">
-                Parceiro Credenciado: <strong className="text-slate-700">{userProfile.company}</strong>
+                Empresa Parceira Credenciada: <strong className="text-slate-700">{userProfile.company}</strong>
               </p>
             </div>
 
             {/* Course Title Badge */}
-            <div className="my-6 inline-block bg-sky-50/80 border border-sky-200/80 px-6 py-2.5 rounded-xl">
-              <span className="text-xs font-medium text-slate-500 block mb-0.5">
-                Trilha Concluída:
+            <div className="my-5 inline-block bg-gradient-to-r from-amber-50 via-sky-50 to-amber-50 border border-amber-200/80 px-6 py-2.5 rounded-xl shadow-2xs">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block mb-0.5">
+                Especialista em Tecnologia & Atendimento White Label
               </span>
-              <span className="text-base sm:text-lg font-bold text-sky-900">
-                {activeCertificate.title}
+              <span className="text-sm sm:text-base font-extrabold text-slate-900">
+                Formação Completa MegaZap Academy (100% Concluída)
               </span>
             </div>
 
             {/* Metrics and Date */}
             <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-600 my-4 py-3 border-y border-slate-100 max-w-md mx-auto">
               <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Carga Horária</span>
-                <span className="font-bold text-slate-800">{activeCertificate.hoursCount}</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Carga Horária Total</span>
+                <span className="font-bold text-slate-800">{activeCertificate.hoursCount || '16 Horas de Formação'}</span>
               </div>
               <div className="w-px h-6 bg-slate-200" />
               <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Concluído em</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Data de Emissão</span>
                 <span className="font-bold text-slate-800">{activeCertificate.issueDate}</span>
               </div>
               <div className="w-px h-6 bg-slate-200" />
               <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Autenticação</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Autenticação Única</span>
                 <span className="font-mono font-bold text-sky-700">{activeCertificate.verificationCode}</span>
               </div>
             </div>
 
             {/* Signatures & Seal */}
-            <div className="mt-8 pt-4 flex flex-col sm:flex-row items-center justify-between gap-6 px-4">
+            <div className="mt-6 pt-3 flex flex-col sm:flex-row items-center justify-between gap-6 px-4">
               <div className="text-center w-44">
                 <div className="h-9 flex items-end justify-center mb-1">
                   <span className="font-serif italic text-base text-slate-700 font-semibold">
@@ -190,11 +190,12 @@ export const CertificateModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Official Seal Badge */}
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-sky-600 to-cyan-500 p-0.5 shadow-md flex items-center justify-center">
-                <div className="w-full h-full rounded-full border-2 border-dashed border-white/60 flex flex-col items-center justify-center text-white">
-                  <ShieldCheck className="w-5 h-5 mb-0.5" />
-                  <span className="text-[7.5px] font-black uppercase tracking-widest">OFICIAL</span>
+              {/* Official Gold Seal Badge */}
+              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-amber-600 via-amber-400 to-amber-500 p-0.5 shadow-lg flex items-center justify-center relative">
+                <div className="w-full h-full rounded-full border-2 border-dashed border-white/80 bg-gradient-to-tr from-amber-700 to-amber-500 flex flex-col items-center justify-center text-white">
+                  <Award className="w-6 h-6 mb-0.5 text-amber-100" />
+                  <span className="text-[8px] font-black uppercase tracking-widest text-amber-100">ESPECIALISTA</span>
+                  <span className="text-[6.5px] font-bold text-white/90">100% OFICIAL</span>
                 </div>
               </div>
 

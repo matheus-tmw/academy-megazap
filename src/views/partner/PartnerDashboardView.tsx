@@ -78,6 +78,9 @@ export const PartnerDashboardView: React.FC = () => {
       try {
         const results = await Promise.all(
           teamMembers.map(async (u) => {
+            if (u.progressPercentage !== undefined) {
+              return [u.uid, u.progressPercentage] as [string, number];
+            }
             try {
               const prog = await getUserProgress(u.uid);
               const completedCount = Object.values(prog || {}).filter(p => p.completed).length;
@@ -111,6 +114,7 @@ export const PartnerDashboardView: React.FC = () => {
   const teamAverageProgress = progressValues.length > 0
     ? Math.round(progressValues.reduce((acc, curr) => acc + curr, 0) / progressValues.length)
     : 0;
+  const completedGraduates = progressValues.filter(p => p === 100).length;
 
   return (
     <div className="space-y-6">
@@ -198,16 +202,16 @@ export const PartnerDashboardView: React.FC = () => {
 
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">Certificados Conquistados</span>
-            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
+            <span className="text-xs font-semibold">Especialistas Formados (100%)</span>
+            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
               <GraduationCap className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-bold text-slate-900 dark:text-white">
-            6
+            {completedGraduates}
           </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-            Emissão White Label
+            {completedGraduates === 1 ? '1 Certificado Master Emitido' : `${completedGraduates} Certificados Master Emitidos`}
           </div>
         </div>
       </div>

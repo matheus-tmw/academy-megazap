@@ -27,6 +27,7 @@ export const MeuProgressoView: React.FC = () => {
     totalTrainingHoursFormatted,
     earnedCertificatesCount,
     navigateToTrack,
+    navigateTo,
     openCertificate
   } = useAcademy();
 
@@ -96,17 +97,20 @@ export const MeuProgressoView: React.FC = () => {
           </p>
         </div>
 
-        {/* Card 4: Certificados */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4.5 shadow-xs hover:shadow-sm transition-shadow">
+        {/* Card 4: Certificado Master */}
+        <div 
+          onClick={() => navigateTo('certificados')}
+          className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4.5 shadow-xs hover:shadow-sm transition-all cursor-pointer group"
+        >
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Certificados</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-amber-500 transition-colors">Certificado Master</span>
             <Award className="w-4 h-4 text-amber-500 dark:text-amber-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight mb-1">
-            {earnedCertificatesCount}
+          <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight mb-1">
+            {overallProgressPercentage === 100 ? 'Disponível 🎓' : `${overallProgressPercentage}%`}
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            {earnedCertificatesCount > 0 ? 'Conquistado e validado' : 'Conclua uma trilha'}
+            {overallProgressPercentage === 100 ? 'Formação Completa Concluída' : '100% de Formação Exigido'}
           </p>
         </div>
       </div>
@@ -153,13 +157,10 @@ export const MeuProgressoView: React.FC = () => {
                       {prog.percentage}%
                     </span>
 
-                    {prog.isCompleted && track.certificateAvailable && (
-                      <button
-                        onClick={() => openCertificate(track.id)}
-                        className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
-                      >
-                        Ver Certificado 🎓
-                      </button>
+                    {prog.isCompleted && (
+                      <span className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-md">
+                        Trilha 100% Concluída
+                      </span>
                     )}
 
                     <button
