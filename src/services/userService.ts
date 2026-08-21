@@ -237,19 +237,28 @@ export async function createAdministrativeUser(params: {
   const usernameDocRef = doc(db, 'usernames', normalizedEmail);
   const usernameSnap = await getDoc(usernameDocRef).catch(() => null);
   if (usernameSnap && usernameSnap.exists()) {
-    throw new UserAlreadyExistsError(
-      rawDisplayUsername,
-      `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
-    );
+    const existingUid = usernameSnap.data()?.uid;
+    if (existingUid) {
+      const userDoc = await getDoc(doc(db, 'users', existingUid)).catch(() => null);
+      if (userDoc && userDoc.exists()) {
+        throw new UserAlreadyExistsError(
+          rawDisplayUsername,
+          `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
+        );
+      }
+    }
   }
 
   const qEmail = query(collection(db, 'users'), where('email', '==', normalizedEmail));
   const snapEmail = await getDocs(qEmail).catch(() => null);
   if (snapEmail && !snapEmail.empty) {
-    throw new UserAlreadyExistsError(
-      rawDisplayUsername,
-      `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
-    );
+    const existingUserDoc = snapEmail.docs[0];
+    if (existingUserDoc && existingUserDoc.exists()) {
+      throw new UserAlreadyExistsError(
+        rawDisplayUsername,
+        `O nome de usuário "${rawDisplayUsername}" já está cadastrado no sistema. Escolha outro nome de usuário para continuar.`
+      );
+    }
   }
 
   // STEP 2: Provision in Firebase Authentication
@@ -300,13 +309,13 @@ export async function createAdministrativeUser(params: {
   };
 
   try {
-    // Write username lock index FIRST (will be blocked by security rules if doc exists)
+    // Write username lock index FIRST
     await setDoc(usernameDocRef, {
       uid: userUid,
       email: normalizedEmail,
       createdAt: serverTimestamp(),
       createdBy: callerProfile?.uid || auth.currentUser?.uid || 'admin'
-    });
+    }, { merge: true });
 
     // Write user profile
     await setDoc(userRef, newUser);
@@ -334,7 +343,7 @@ export async function createAdministrativeUser(params: {
     }
 
     if (errorStr.includes('Missing or insufficient permissions') || error?.code === 'permission-denied') {
-      throw new Error('Não foi possível salvar o perfil do usuário. Verifique se possui permissão de administrador.');
+      throw new Error('Não foi possível salvar o perfil no Firestore por permissão recusada. Certifique-se de estar autenticado com uma conta de administrador.');
     }
 
     handleFirestoreError(error, OperationType.CREATE, `users/${userUid}`);
