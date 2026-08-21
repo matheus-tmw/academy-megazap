@@ -1084,7 +1084,39 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
     return tracks.filter(t => getTrackProgress(t.id).isCompleted).length;
   }, [tracks, completedLessons]);
 
-  const totalTrainingHoursFormatted = '5h 40min';
+  const totalStudiedSeconds = useMemo(() => {
+    return allLessons.reduce((acc, lesson) => {
+      let sec = lesson.durationSeconds;
+      if (!sec && lesson.duration) {
+        const parts = lesson.duration.split(':').map(p => parseInt(p, 10));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          sec = parts[0] * 60 + parts[1];
+        } else {
+          sec = 300;
+        }
+      }
+      if (!sec) sec = 300;
+
+      if (completedLessons.includes(lesson.id)) {
+        return acc + sec;
+      }
+      const prog = lessonProgress[lesson.id] || 0;
+      if (prog > 0) {
+        return acc + Math.round((sec * prog) / 100);
+      }
+      return acc;
+    }, 0);
+  }, [allLessons, completedLessons, lessonProgress]);
+
+  const totalTrainingHoursFormatted = useMemo(() => {
+    if (totalStudiedSeconds <= 0) return '0min';
+    const hours = Math.floor(totalStudiedSeconds / 3600);
+    const mins = Math.floor((totalStudiedSeconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${mins}min`;
+    }
+    return `${mins}min`;
+  }, [totalStudiedSeconds]);
 
   // Certificate opener
   const openCertificate = (trackId: string) => {

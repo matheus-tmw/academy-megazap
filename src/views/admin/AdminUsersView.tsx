@@ -34,6 +34,8 @@ import { formatDisplayIdentifier } from '../../utils/userIdentifiers';
 import { PasswordResetModal } from '../../components/PasswordResetModal';
 import { UserDetailModal } from '../../components/UserDetailModal';
 import { UserAlreadyExistsModal } from '../../components/UserAlreadyExistsModal';
+import { getUserProgress } from '../../services/progressService';
+import { ALL_LESSONS } from '../../data/coursesData';
 
 export const AdminUsersView: React.FC = () => {
   const { currentUser } = useAcademy();
@@ -41,6 +43,7 @@ export const AdminUsersView: React.FC = () => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [userProgressMap, setUserProgressMap] = useState<Record<string, number>>({});
 
   // Filters
   const [search, setSearch] = useState('');
@@ -123,6 +126,41 @@ export const AdminUsersView: React.FC = () => {
       unsubscribeUsers();
     };
   }, []);
+
+  // Fetch real progress percentage for users listed in the table
+  useEffect(() => {
+    if (!users || users.length === 0) return;
+
+    let isMounted = true;
+    async function loadProgressForUsers() {
+      const totalLessons = ALL_LESSONS.length || 1;
+      try {
+        const results = await Promise.all(
+          users.map(async (u) => {
+            try {
+              const prog = await getUserProgress(u.uid);
+              const completedCount = Object.values(prog || {}).filter(p => p.completed).length;
+              const pct = Math.min(100, Math.round((completedCount / totalLessons) * 100));
+              return [u.uid, pct] as [string, number];
+            } catch {
+              return [u.uid, 0] as [string, number];
+            }
+          })
+        );
+        if (isMounted) {
+          setUserProgressMap(Object.fromEntries(results));
+        }
+      } catch {
+        // ignore errors
+      }
+    }
+
+    loadProgressForUsers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [users]);
 
   const openCreateModal = () => {
     setFormName('');
@@ -452,16 +490,26 @@ export const AdminUsersView: React.FC = () => {
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => setSelectedUserForModal(user)}
-                          className="inline-flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-colors cursor-pointer group"
-                          title="Clique para ver o progresso detalhado das trilhas e aulas"
-                        >
-                          <span className="font-semibold text-slate-700 dark:text-slate-300 group-hover:text-sky-600 dark:group-hover:text-sky-400 text-xs">75%</span>
-                          <div className="w-12 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: '75%' }} />
-                          </div>
-                        </button>
+                        {(() => {
+                          const pct = userProgressMap[user.uid] ?? 0;
+                          return (
+                            <button
+                              onClick={() => setSelectedUserForModal(user)}
+                              className="inline-flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-colors cursor-pointer group"
+                              title="Clique para ver o progresso detalhado das trilhas e aulas"
+                            >
+                              <span className="font-semibold text-slate-700 dark:text-slate-300 group-hover:text-sky-600 dark:group-hover:text-sky-400 text-xs">
+                                {pct}%
+                              </span>
+                              <div className="w-12 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-emerald-500 rounded-full transition-all duration-300" 
+                                  style={{ width: `${Math.max(pct, 0)}%` }} 
+                                />
+                              </div>
+                            </button>
+                          );
+                        })()}
                       </td>
 
                       <td className="py-3.5 px-4 text-right">

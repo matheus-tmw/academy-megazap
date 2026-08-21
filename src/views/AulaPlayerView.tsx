@@ -176,13 +176,16 @@ export const AulaPlayerView: React.FC = () => {
     try {
       if (url.includes('youtu.be/')) {
         const id = url.split('youtu.be/')[1]?.split('?')[0];
-        return `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1`;
+        return `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1&controls=0&rel=0&modestbranding=1`;
       }
       if (url.includes('watch?v=')) {
         const id = url.split('watch?v=')[1]?.split('&')[0];
-        return `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1`;
+        return `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1&controls=0&rel=0&modestbranding=1`;
       }
-      if (url.includes('embed/')) return url;
+      if (url.includes('embed/')) {
+        const id = url.split('embed/')[1]?.split('?')[0];
+        return `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1&controls=0&rel=0&modestbranding=1`;
+      }
     } catch {
       // fallback
     }
@@ -220,17 +223,17 @@ export const AulaPlayerView: React.FC = () => {
   };
 
   const attemptSeek = (requestedSec: number) => {
-    const isSuper = activeRole === 'super_admin';
     const done = isCompleted(currentLesson.id);
 
-    if (isSuper || done) {
+    // If lesson is fully completed, free seeking is unlocked
+    if (done) {
       applySeek(requestedSec);
       setShowSeekNotice(false);
       return;
     }
 
-    // Max allowed target is 30 seconds beyond the maximum position reached so far
-    const maxAllowedSec = Math.min(totalDurationSeconds, maxWatchedSec + 30);
+    // Strictly limit forward seeking to max watched position (+2 seconds buffer)
+    const maxAllowedSec = Math.min(totalDurationSeconds, maxWatchedSec + 2);
 
     if (requestedSec > maxAllowedSec) {
       applySeek(maxAllowedSec);
@@ -387,11 +390,10 @@ export const AulaPlayerView: React.FC = () => {
                   onTimeUpdate={(e) => {
                     const video = e.target as HTMLVideoElement;
                     const current = Math.round(video.currentTime);
-                    const isSuper = activeRole === 'super_admin';
                     const done = lessonCompleted;
 
-                    if (!isSuper && !done && current > maxWatchedSec + 30) {
-                      const clamped = Math.min(totalDurationSeconds, maxWatchedSec + 30);
+                    if (!done && current > maxWatchedSec + 2) {
+                      const clamped = Math.min(totalDurationSeconds, maxWatchedSec + 2);
                       video.currentTime = clamped;
                       setCurrentTimeSec(clamped);
                       setShowSeekNotice(true);
@@ -610,13 +612,13 @@ export const AulaPlayerView: React.FC = () => {
 
           {/* PLAYER PROGRESS & ACTION BAR */}
           <div className="space-y-2">
-            {showSeekNotice && !lessonCompleted && !isSuperAdmin && (
+            {showSeekNotice && !lessonCompleted && (
               <div className="bg-sky-50 dark:bg-sky-950/80 border border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200 p-3 rounded-xl text-xs flex items-center justify-between gap-2.5 animate-fadeIn">
                 <div className="flex items-center gap-2">
                   <Lock className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
                   <div>
-                    <span className="font-bold block">Avanço de vídeo protegido!</span>
-                    <span>Para garantir a aprendizagem, você só pode avançar no máximo <b>30 segundos</b> além do trecho já assistido.</span>
+                    <span className="font-bold block">Avanço de vídeo bloqueado!</span>
+                    <span>Para garantir o aprendizado real, você só pode avançar até o trecho da aula que já assistiu.</span>
                   </div>
                 </div>
                 <button
