@@ -30,7 +30,8 @@ export const TrilhaDetalhesView: React.FC = () => {
     navigateToLesson, 
     isCompleted,
     getLessonProgress,
-    openCertificate
+    openCertificate,
+    getLessonDisplayDuration
   } = useAcademy();
 
   if (!currentTrack) {
@@ -329,10 +330,12 @@ export const TrilhaDetalhesView: React.FC = () => {
 
                           <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
                             <div className="flex items-center gap-2">
-                              <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-md border border-slate-200/80 dark:border-slate-700/80">
-                                <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                                {lesson.duration}
-                              </span>
+                              {getLessonDisplayDuration(lesson) && (
+                                <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-md border border-slate-200/80 dark:border-slate-700/80">
+                                  <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                                  {getLessonDisplayDuration(lesson)}
+                                </span>
+                              )}
                               <span className="px-2 py-1 text-[10px] font-medium text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-md">
                                 {lesson.level}
                               </span>

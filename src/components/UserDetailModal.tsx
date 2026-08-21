@@ -26,6 +26,7 @@ import { getUserProgress } from '../services/progressService';
 import { getUserCertificates } from '../services/certificateService';
 import { getPartner } from '../services/partnerService';
 import { formatDisplayIdentifier } from '../utils/userIdentifiers';
+import { useAcademy } from '../context/AcademyContext';
 
 interface UserDetailModalProps {
   user: UserProfile | null;
@@ -44,6 +45,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
   onResetPassword,
   onToggleStatus
 }) => {
+  const { getLessonDisplayDuration } = useAcademy();
   const [activeTab, setActiveTab] = useState<'tracks' | 'certificates' | 'account'>('tracks');
   const [progressMap, setProgressMap] = useState<Record<string, ProgressRecord>>({});
   const [certificates, setCertificates] = useState<CertificateDocument[]>([]);
@@ -367,11 +369,15 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                                             {lIdx + 1}. {lesson.title}
                                           </div>
                                           <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
-                                            <span className="flex items-center gap-1">
-                                              <Clock className="w-3 h-3 text-slate-400" />
-                                              {lesson.duration}
-                                            </span>
-                                            <span>•</span>
+                                            {getLessonDisplayDuration(lesson) && (
+                                              <>
+                                                <span className="flex items-center gap-1">
+                                                  <Clock className="w-3 h-3 text-slate-400" />
+                                                  {getLessonDisplayDuration(lesson)}
+                                                </span>
+                                                <span>•</span>
+                                              </>
+                                            )}
                                             <span>Nível: {lesson.level}</span>
                                           </div>
                                         </div>

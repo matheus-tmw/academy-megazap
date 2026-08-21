@@ -86,7 +86,8 @@ export const AdminContentCMSView: React.FC = () => {
     contentLoading,
     currentUser,
     navigateToLesson,
-    navigateToTrack
+    navigateToTrack,
+    getLessonDisplayDuration
   } = useAcademy();
 
   // Navigation & View States
@@ -996,10 +997,12 @@ export const AdminContentCMSView: React.FC = () => {
                                               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                                                 {lesson.title}
                                               </span>
-                                              <span className="text-[10px] text-slate-400 flex items-center gap-1 shrink-0">
-                                                <Clock className="w-2.5 h-2.5" />
-                                                {lesson.duration}
-                                              </span>
+                                              {getLessonDisplayDuration(lesson) && (
+                                                <span className="text-[10px] text-slate-400 flex items-center gap-1 shrink-0">
+                                                  <Clock className="w-2.5 h-2.5" />
+                                                  {getLessonDisplayDuration(lesson)}
+                                                </span>
+                                              )}
                                               {lesson.featured && (
                                                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                                                   Destaque
@@ -1466,7 +1469,9 @@ export const AdminContentCMSView: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <span className="text-slate-400 font-mono text-[11px] w-4">{lIdx + 1}.</span>
                           <span className="font-medium text-slate-800 dark:text-slate-200">{lesson.title}</span>
-                          <span className="text-[10px] text-slate-400">({lesson.duration})</span>
+                          {getLessonDisplayDuration(lesson) && (
+                            <span className="text-[10px] text-slate-400">({getLessonDisplayDuration(lesson)})</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1">
                           <button

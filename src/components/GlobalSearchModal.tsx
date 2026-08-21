@@ -28,7 +28,8 @@ export const GlobalSearchModal: React.FC = () => {
     setSearchQuery,
     navigateToLesson,
     navigateToTrack,
-    isCompleted
+    isCompleted,
+    getLessonDisplayDuration
   } = useAcademy();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -278,11 +279,15 @@ export const GlobalSearchModal: React.FC = () => {
                             </p>
 
                             <div className="flex items-center gap-3 mt-1.5 text-[10.5px] text-slate-400">
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {lesson.duration}
-                              </span>
-                              <span>•</span>
+                              {getLessonDisplayDuration(lesson) && (
+                                <>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {getLessonDisplayDuration(lesson)}
+                                  </span>
+                                  <span>•</span>
+                                </>
+                              )}
                               <span>Nível {lesson.level}</span>
                             </div>
                           </div>

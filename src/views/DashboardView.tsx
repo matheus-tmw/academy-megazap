@@ -39,7 +39,8 @@ export const DashboardView: React.FC = () => {
     navigateToLesson,
     isCompleted,
     isFavorite,
-    toggleFavorite
+    toggleFavorite,
+    getLessonDisplayDuration
   } = useAcademy();
 
   // Recommended lessons
@@ -388,10 +389,12 @@ export const DashboardView: React.FC = () => {
                       <Star className={`w-3.5 h-3.5 ${fav ? 'fill-amber-400 text-amber-400' : 'text-white'}`} />
                     </button>
 
-                    <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-slate-900/80 backdrop-blur-xs text-[10px] font-medium text-white rounded flex items-center gap-1 z-10">
-                      <Clock className="w-3 h-3" />
-                      {lesson.duration}
-                    </div>
+                    {getLessonDisplayDuration(lesson) && (
+                      <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-slate-900/80 backdrop-blur-xs text-[10px] font-medium text-white rounded flex items-center gap-1 z-10">
+                        <Clock className="w-3 h-3" />
+                        {getLessonDisplayDuration(lesson)}
+                      </div>
+                    )}
                   </div>
 
                   {/* Content */}

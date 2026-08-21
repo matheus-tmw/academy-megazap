@@ -48,7 +48,10 @@ export const AulaPlayerView: React.FC = () => {
     updateLessonProgress,
     userNotes,
     saveUserNote,
-    activeRole
+    activeRole,
+    updateLessonDuration,
+    getLessonDisplayDuration,
+    getLessonDisplaySeconds
   } = useAcademy();
 
   // Video player simulator states
@@ -86,7 +89,26 @@ export const AulaPlayerView: React.FC = () => {
   }
 
   const lessonCompleted = isCompleted(currentLesson.id);
-  const totalDurationSeconds = realDurationSec || currentLesson.durationSeconds || 522;
+  const detectedDisplaySec = getLessonDisplaySeconds(currentLesson);
+  const totalDurationSeconds = realDurationSec || (detectedDisplaySec > 0 ? detectedDisplaySec : (currentLesson.durationSeconds || 300));
+
+  // Listen for YouTube iframe postMessage duration reports
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (data && data.info && typeof data.info.duration === 'number' && data.info.duration > 0) {
+          const dur = Math.round(data.info.duration);
+          setRealDurationSec(dur);
+          updateLessonDuration(currentLesson.id, dur);
+        }
+      } catch {
+        // ignore non-json messages
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [currentLesson.id, updateLessonDuration]);
 
   // Listen to browser fullscreen changes
   useEffect(() => {
@@ -193,14 +215,18 @@ export const AulaPlayerView: React.FC = () => {
   }
 
   const handleTogglePlay = () => {
-    if (html5VideoRef.current && currentLesson.videoUrl && !isYouTubeUrl(currentLesson.videoUrl)) {
-      if (isPlaying) {
-        html5VideoRef.current.pause();
+    const vid = html5VideoRef.current;
+    if (vid && currentLesson.videoUrl && !isYouTubeUrl(currentLesson.videoUrl)) {
+      if (vid.paused) {
+        vid.play().catch(() => {});
+        setIsPlaying(true);
       } else {
-        html5VideoRef.current.play().catch(() => {});
+        vid.pause();
+        setIsPlaying(false);
       }
+    } else {
+      setIsPlaying(prev => !prev);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleToggleFullscreen = () => {
@@ -377,12 +403,14 @@ export const AulaPlayerView: React.FC = () => {
                     const dur = Math.round((e.target as HTMLVideoElement).duration);
                     if (dur && !isNaN(dur) && dur > 0) {
                       setRealDurationSec(dur);
+                      updateLessonDuration(currentLesson.id, dur);
                     }
                   }}
                   onDurationChange={(e) => {
                     const dur = Math.round((e.target as HTMLVideoElement).duration);
                     if (dur && !isNaN(dur) && dur > 0) {
                       setRealDurationSec(dur);
+                      updateLessonDuration(currentLesson.id, dur);
                     }
                   }}
                   onPlay={() => setIsPlaying(true)}
@@ -490,17 +518,15 @@ export const AulaPlayerView: React.FC = () => {
               </div>
             </div>
 
-            {/* Big Central Play / Pause Click Target */}
-            {!isYouTubeUrl(currentLesson.videoUrl) && (
+            {/* Big Central Play Target (Only shown when paused) */}
+            {!isYouTubeUrl(currentLesson.videoUrl) && !isPlaying && (
               <div 
                 onClick={handleTogglePlay}
-                className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer"
+                className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer bg-black/20"
               >
-                {!isPlaying && (
-                  <div className="w-16 h-16 rounded-full bg-sky-600/90 hover:bg-sky-500 text-white flex items-center justify-center shadow-xl transition-all transform hover:scale-110">
-                    <Play className="w-7 h-7 fill-white ml-1" />
-                  </div>
-                )}
+                <div className="w-16 h-16 rounded-full bg-sky-600/90 hover:bg-sky-500 text-white flex items-center justify-center shadow-xl transition-all transform hover:scale-110">
+                  <Play className="w-7 h-7 fill-white ml-1" />
+                </div>
               </div>
             )}
 
@@ -508,14 +534,22 @@ export const AulaPlayerView: React.FC = () => {
             <div className="relative z-20 p-3 sm:p-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent space-y-2">
               {/* Scrub Seek Bar */}
               <div className="flex items-center gap-2 group/slider">
-                <input
-                  type="range"
-                  min={0}
-                  max={totalDurationSeconds}
-                  value={currentTimeSec}
-                  onChange={handleSeek}
-                  className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-sky-500 hover:h-2 transition-all"
-                />
+                {(() => {
+                  const maxAllowedForSlider = lessonCompleted
+                    ? totalDurationSeconds
+                    : Math.min(totalDurationSeconds, Math.max(0, maxWatchedSec + 2));
+                  return (
+                    <input
+                      type="range"
+                      min={0}
+                      max={maxAllowedForSlider}
+                      value={Math.min(currentTimeSec, maxAllowedForSlider)}
+                      onChange={handleSeek}
+                      onInput={(e) => attemptSeek(Number((e.target as HTMLInputElement).value))}
+                      className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-sky-500 hover:h-2 transition-all"
+                    />
+                  );
+                })()}
               </div>
 
               {/* Controls Row */}
@@ -892,7 +926,9 @@ export const AulaPlayerView: React.FC = () => {
                     <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors truncate">
                       {prevLesson.title}
                     </h4>
-                    <span className="text-[10.5px] text-slate-400 dark:text-slate-500">{prevLesson.duration}</span>
+                    {getLessonDisplayDuration(prevLesson) && (
+                      <span className="text-[10.5px] text-slate-400 dark:text-slate-500">{getLessonDisplayDuration(prevLesson)}</span>
+                    )}
                   </div>
                 </div>
               </button>
@@ -917,7 +953,9 @@ export const AulaPlayerView: React.FC = () => {
                   <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors truncate">
                     {nextLesson.title}
                   </h4>
-                  <span className="text-[10.5px] text-slate-400 dark:text-slate-500">{nextLesson.duration}</span>
+                  {getLessonDisplayDuration(nextLesson) && (
+                    <span className="text-[10.5px] text-slate-400 dark:text-slate-500">{getLessonDisplayDuration(nextLesson)}</span>
+                  )}
                 </div>
                 <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-950/60 group-hover:bg-sky-600 text-sky-700 dark:text-sky-300 group-hover:text-white transition-all shrink-0">
                   <ArrowRight className="w-4 h-4" />
@@ -993,9 +1031,11 @@ export const AulaPlayerView: React.FC = () => {
                             </span>
                           </div>
 
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0 pl-2 font-medium">
-                            {lesson.duration}
-                          </span>
+                          {getLessonDisplayDuration(lesson) && (
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0 pl-2 font-medium">
+                              {getLessonDisplayDuration(lesson)}
+                            </span>
+                          )}
                         </div>
                       );
                     })}

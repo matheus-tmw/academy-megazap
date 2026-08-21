@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { 
   NavigationTab, 
   Track, 
@@ -82,6 +82,9 @@ export interface AcademyContextType {
   isCompleted: (lessonId: string) => boolean;
   getLessonProgress: (lessonId: string) => number;
   saveUserNote: (lessonId: string, text: string) => void;
+  updateLessonDuration: (lessonId: string, durationSeconds: number) => void;
+  getLessonDisplayDuration: (lesson?: { id: string; videoUrl?: string; duration?: string; durationSeconds?: number } | null) => string | null;
+  getLessonDisplaySeconds: (lesson?: { id: string; videoUrl?: string; duration?: string; durationSeconds?: number } | null) => number;
   
   // Computed Metrics
   overallProgressPercentage: number;
@@ -1076,6 +1079,78 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
   };
 
+  // Custom real durations captured from video players
+  const [lessonRealDurations, setLessonRealDurations] = useState<Record<string, { duration: string; durationSeconds: number }>>(() => {
+    try {
+      const saved = localStorage.getItem('megazap_academy_lesson_durations');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const updateLessonDuration = useCallback((lessonId: string, durationSeconds: number) => {
+    if (!lessonId || !durationSeconds || isNaN(durationSeconds) || durationSeconds <= 0) return;
+
+    const m = Math.floor(durationSeconds / 60);
+    const s = Math.floor(durationSeconds % 60);
+    const formatted = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+    setLessonRealDurations(prev => {
+      if (prev[lessonId]?.durationSeconds === durationSeconds) return prev;
+      const next = {
+        ...prev,
+        [lessonId]: {
+          duration: formatted,
+          durationSeconds
+        }
+      };
+      try {
+        localStorage.setItem('megazap_academy_lesson_durations', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const getLessonDisplayDuration = useCallback((lesson?: { id: string; videoUrl?: string; duration?: string; durationSeconds?: number } | null): string | null => {
+    if (!lesson) return null;
+    const hasVideo = !!(lesson.videoUrl && lesson.videoUrl.trim().length > 0);
+    if (!hasVideo) return null; // Hide duration when lesson has no video URL!
+
+    if (lessonRealDurations[lesson.id]?.duration) {
+      return lessonRealDurations[lesson.id].duration;
+    }
+    if (lesson.durationSeconds && lesson.durationSeconds > 0) {
+      const m = Math.floor(lesson.durationSeconds / 60);
+      const s = Math.floor(lesson.durationSeconds % 60);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    if (lesson.duration) {
+      return lesson.duration;
+    }
+    return null;
+  }, [lessonRealDurations]);
+
+  const getLessonDisplaySeconds = useCallback((lesson?: { id: string; videoUrl?: string; duration?: string; durationSeconds?: number } | null): number => {
+    if (!lesson) return 0;
+    const hasVideo = !!(lesson.videoUrl && lesson.videoUrl.trim().length > 0);
+    if (!hasVideo) return 0;
+
+    if (lessonRealDurations[lesson.id]?.durationSeconds) {
+      return lessonRealDurations[lesson.id].durationSeconds;
+    }
+    if (lesson.durationSeconds && lesson.durationSeconds > 0) {
+      return lesson.durationSeconds;
+    }
+    if (lesson.duration) {
+      const parts = lesson.duration.split(':').map(p => parseInt(p, 10));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        return parts[0] * 60 + parts[1];
+      }
+    }
+    return 300;
+  }, [lessonRealDurations]);
+
   const startedTracksCount = useMemo(() => {
     return tracks.filter(t => getTrackProgress(t.id).hasStarted).length;
   }, [tracks, completedLessons, lessonProgress]);
@@ -1086,16 +1161,8 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const totalStudiedSeconds = useMemo(() => {
     return allLessons.reduce((acc, lesson) => {
-      let sec = lesson.durationSeconds;
-      if (!sec && lesson.duration) {
-        const parts = lesson.duration.split(':').map(p => parseInt(p, 10));
-        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-          sec = parts[0] * 60 + parts[1];
-        } else {
-          sec = 300;
-        }
-      }
-      if (!sec) sec = 300;
+      const sec = getLessonDisplaySeconds(lesson);
+      if (sec <= 0) return acc;
 
       if (completedLessons.includes(lesson.id)) {
         return acc + sec;
@@ -1106,7 +1173,7 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
       return acc;
     }, 0);
-  }, [allLessons, completedLessons, lessonProgress]);
+  }, [allLessons, completedLessons, lessonProgress, getLessonDisplaySeconds]);
 
   const totalTrainingHoursFormatted = useMemo(() => {
     if (totalStudiedSeconds <= 0) return '0min';
@@ -1202,6 +1269,9 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
         isCompleted,
         getLessonProgress,
         saveUserNote,
+        updateLessonDuration,
+        getLessonDisplayDuration,
+        getLessonDisplaySeconds,
         overallProgressPercentage,
         totalCompletedLessonsCount,
         totalLessonsCount,
