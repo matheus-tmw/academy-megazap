@@ -12,6 +12,7 @@ import { db } from '../lib/firebase';
 import { CertificateDocument } from '../types/backend';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { logAuditEvent } from './auditService';
+import { logFirestoreRead, logFirestoreWrite } from '../lib/firestore-logger';
 
 /**
  * Service for Issuing and Validating Graduation Certificates.
@@ -64,6 +65,7 @@ export async function getUserCertificates(userId: string): Promise<CertificateDo
   try {
     const q = query(collection(db, path), where('userId', '==', userId));
     const snapshot = await getDocs(q);
+    logFirestoreRead('getUserCertificates', path, snapshot.docs.length);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as CertificateDocument));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -75,6 +77,7 @@ export async function getPartnerCertificates(partnerId: string): Promise<Certifi
   try {
     const q = query(collection(db, path), where('partnerId', '==', partnerId));
     const snapshot = await getDocs(q);
+    logFirestoreRead('getPartnerCertificates', path, snapshot.docs.length);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as CertificateDocument));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);

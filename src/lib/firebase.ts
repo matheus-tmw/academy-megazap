@@ -15,8 +15,12 @@ export const db = (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestor
 export const auth = getAuth(app);
 
 // Connection test as mandated by Skill
+let isConnectionTested = false;
 export async function testConnection() {
+  if (isConnectionTested) return;
+  isConnectionTested = true;
   try {
+    console.log('[FIRESTORE READ] testConnection -> test/connection (1 doc)');
     await getDocFromServer(doc(db, 'test', 'connection'));
     console.log('Firebase Firestore connection verified successfully.');
   } catch (error) {

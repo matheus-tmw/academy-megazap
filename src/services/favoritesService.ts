@@ -10,6 +10,12 @@ import {
 import { db } from '../lib/firebase';
 import { FavoriteRecord } from '../types/backend';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { 
+  logFirestoreRead, 
+  logFirestoreWrite, 
+  logFirestoreListenerStart, 
+  logFirestoreListenerStop 
+} from '../lib/firestore-logger';
 
 /**
  * Service for Managing User Favorites.
@@ -24,6 +30,7 @@ export async function addFavorite(uid: string, lessonId: string): Promise<void> 
   };
 
   try {
+    logFirestoreWrite('addFavorite', `users/${uid}/favorites/${lessonId}`, 'setDoc');
     await setDoc(favDocRef, data);
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, `users/${uid}/favorites/${lessonId}`);
@@ -33,6 +40,7 @@ export async function addFavorite(uid: string, lessonId: string): Promise<void> 
 export async function removeFavorite(uid: string, lessonId: string): Promise<void> {
   const favDocRef = doc(db, 'users', uid, 'favorites', lessonId);
   try {
+    logFirestoreWrite('removeFavorite', `users/${uid}/favorites/${lessonId}`, 'deleteDoc');
     await deleteDoc(favDocRef);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `users/${uid}/favorites/${lessonId}`);
@@ -43,6 +51,7 @@ export async function getUserFavorites(uid: string): Promise<string[]> {
   const path = `users/${uid}/favorites`;
   try {
     const snapshot = await getDocs(collection(db, 'users', uid, 'favorites'));
+    logFirestoreRead('getUserFavorites', path, snapshot.docs.length);
     return snapshot.docs.map(docSnap => docSnap.id);
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -51,9 +60,11 @@ export async function getUserFavorites(uid: string): Promise<string[]> {
 
 export function listenToUserFavorites(uid: string, callback: (favoriteIds: string[]) => void) {
   const path = `users/${uid}/favorites`;
-  return onSnapshot(
+  logFirestoreListenerStart('listenToUserFavorites', path);
+  const unsubscribe = onSnapshot(
     collection(db, 'users', uid, 'favorites'),
     (snapshot) => {
+      logFirestoreRead('listenToUserFavorites (onSnapshot update)', path, snapshot.docs.length);
       const ids = snapshot.docs.map(docSnap => docSnap.id);
       callback(ids);
     },
@@ -61,4 +72,9 @@ export function listenToUserFavorites(uid: string, callback: (favoriteIds: strin
       console.warn(`Favorites subscription notice for ${path}:`, error?.message || error);
     }
   );
+
+  return () => {
+    logFirestoreListenerStop('listenToUserFavorites', path);
+    unsubscribe();
+  };
 }

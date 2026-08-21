@@ -1,6 +1,7 @@
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { TRACKS_DATA } from '../data/coursesData';
+import { logFirestoreRead, logFirestoreWrite } from '../lib/firestore-logger';
 
 /**
  * Seed Database Utility.
@@ -18,6 +19,7 @@ export async function seedInitialDatabase(force = false) {
     // Quick check: If courses collection already has data in Firestore, mark as seeded and skip mass writes
     const { getDoc } = await import('firebase/firestore');
     const sampleCourseRef = doc(db, 'courses', 'primeiros-passos');
+    logFirestoreRead('seedInitialDatabase (check sample course)', 'courses/primeiros-passos', 1);
     const sampleSnap = await getDoc(sampleCourseRef).catch(() => null);
 
     if (sampleSnap && sampleSnap.exists() && !force) {

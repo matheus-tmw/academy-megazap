@@ -11,6 +11,12 @@ import {
 import { db } from '../lib/firebase';
 import { ProgressRecord } from '../types/backend';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { 
+  logFirestoreRead, 
+  logFirestoreWrite, 
+  logFirestoreListenerStart, 
+  logFirestoreListenerStop 
+} from '../lib/firestore-logger';
 
 /**
  * Service for Recording and Synchronizing User Progress.
@@ -31,6 +37,7 @@ export async function saveLessonProgress(
   const progressDocRef = doc(db, 'users', uid, 'progress', lessonId);
 
   try {
+    logFirestoreRead('saveLessonProgress (check existing)', `users/${uid}/progress/${lessonId}`, 1);
     const existingDoc = await getDoc(progressDocRef);
     if (!existingDoc.exists()) {
       const record: ProgressRecord = {
@@ -44,11 +51,13 @@ export async function saveLessonProgress(
         lastWatchedAt: serverTimestamp() as any,
         updatedAt: serverTimestamp() as any,
       };
+      logFirestoreWrite('saveLessonProgress', `users/${uid}/progress/${lessonId}`, 'setDoc');
       await setDoc(progressDocRef, record);
     } else {
       const isAlreadyCompleted = existingDoc.data()?.completed || false;
       const shouldMarkCompleted = completed || isAlreadyCompleted || progressPercent >= 95;
 
+      logFirestoreWrite('saveLessonProgress', `users/${uid}/progress/${lessonId}`, 'updateDoc');
       await updateDoc(progressDocRef, {
         progressPercent: Math.min(100, Math.max(0, Math.round(progressPercent))),
         completed: shouldMarkCompleted,
@@ -66,6 +75,7 @@ export async function getUserProgress(uid: string): Promise<Record<string, Progr
   const path = `users/${uid}/progress`;
   try {
     const snapshot = await getDocs(collection(db, 'users', uid, 'progress'));
+    logFirestoreRead('getUserProgress', path, snapshot.docs.length);
     const progressMap: Record<string, ProgressRecord> = {};
     snapshot.docs.forEach(docSnap => {
       progressMap[docSnap.id] = docSnap.data() as ProgressRecord;
@@ -81,9 +91,11 @@ export function listenToUserProgress(
   callback: (progressMap: Record<string, ProgressRecord>) => void
 ) {
   const path = `users/${uid}/progress`;
-  return onSnapshot(
+  logFirestoreListenerStart('listenToUserProgress', path);
+  const unsubscribe = onSnapshot(
     collection(db, 'users', uid, 'progress'),
     (snapshot) => {
+      logFirestoreRead('listenToUserProgress (onSnapshot update)', path, snapshot.docs.length);
       const progressMap: Record<string, ProgressRecord> = {};
       snapshot.docs.forEach(docSnap => {
         progressMap[docSnap.id] = docSnap.data() as ProgressRecord;
@@ -94,4 +106,9 @@ export function listenToUserProgress(
       console.warn(`Progress subscription notice for ${path}:`, error?.message || error);
     }
   );
+
+  return () => {
+    logFirestoreListenerStop('listenToUserProgress', path);
+    unsubscribe();
+  };
 }

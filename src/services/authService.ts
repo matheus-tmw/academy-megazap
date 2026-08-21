@@ -28,6 +28,7 @@ import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { logAuditEvent } from './auditService';
 import { normalizeAuthIdentifier } from '../utils/userIdentifiers';
 import { provisionFirebaseAuthUser } from './authAdminHelper';
+import { logFirestoreRead, logFirestoreWrite } from '../lib/firestore-logger';
 
 /**
  * Authentication Service using Firebase Authentication.
@@ -249,6 +250,7 @@ export async function sendResetPassword(emailOrUsername: string): Promise<void> 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const userDocRef = doc(db, 'users', uid);
   try {
+    logFirestoreRead('getUserProfile', `users/${uid}`, 1);
     const snapshot = await getDoc(userDocRef);
     if (snapshot.exists()) {
       const data = snapshot.data() as UserProfile;

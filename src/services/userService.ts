@@ -18,6 +18,12 @@ import { logAuditEvent } from './auditService';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { normalizeAuthIdentifier, formatDisplayIdentifier } from '../utils/userIdentifiers';
 import { provisionFirebaseAuthUser, generateTemporaryPassword } from './authAdminHelper';
+import { 
+  logFirestoreRead, 
+  logFirestoreWrite, 
+  logFirestoreListenerStart, 
+  logFirestoreListenerStop 
+} from '../lib/firestore-logger';
 
 /**
  * Custom Error thrown when attempting to register or update a user with a duplicate username/login.
@@ -88,8 +94,10 @@ export function listenToAllUsers(
   onError?: (error: any) => void
 ): () => void {
   const collRef = collection(db, 'users');
-  return onSnapshot(collRef, async (snapshot) => {
+  logFirestoreListenerStart('listenToAllUsers', 'users');
+  const unsubscribe = onSnapshot(collRef, async (snapshot) => {
     try {
+      logFirestoreRead('listenToAllUsers (onSnapshot update)', 'users', snapshot.docs.length);
       const raw = snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
       const deduplicated = await deduplicateUsersList(raw);
       onUpdate(deduplicated);
@@ -101,6 +109,11 @@ export function listenToAllUsers(
     console.warn('Real-time users listener error:', error);
     if (onError) onError(error);
   });
+
+  return () => {
+    logFirestoreListenerStop('listenToAllUsers', 'users');
+    unsubscribe();
+  };
 }
 
 /**
@@ -112,8 +125,10 @@ export function listenToPartnerUsers(
   onError?: (error: any) => void
 ): () => void {
   const collRef = collection(db, 'users');
-  return onSnapshot(collRef, async (snapshot) => {
+  logFirestoreListenerStart('listenToPartnerUsers', `users (partnerId=${partnerId})`);
+  const unsubscribe = onSnapshot(collRef, async (snapshot) => {
     try {
+      logFirestoreRead('listenToPartnerUsers (onSnapshot update)', 'users', snapshot.docs.length);
       const raw = snapshot.docs
         .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
         .filter(u => u.partnerId === partnerId || (partnerId === 'partner_ultrafox' && (!u.partnerId || u.partnerId === 'partner_ultrafox') && u.role !== 'super_admin'));
@@ -127,12 +142,18 @@ export function listenToPartnerUsers(
     console.warn('Real-time partner users listener error:', error);
     if (onError) onError(error);
   });
+
+  return () => {
+    logFirestoreListenerStop('listenToPartnerUsers', `users (partnerId=${partnerId})`);
+    unsubscribe();
+  };
 }
 
 export async function getAllUsers(): Promise<UserProfile[]> {
   const path = 'users';
   try {
     const snapshot = await getDocs(collection(db, path));
+    logFirestoreRead('getAllUsers', path, snapshot.docs.length);
     const raw = snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
     return await deduplicateUsersList(raw);
   } catch (error) {
@@ -145,6 +166,7 @@ export async function getUsersByPartner(partnerId: string): Promise<UserProfile[
   const path = 'users';
   try {
     const snapshot = await getDocs(collection(db, path));
+    logFirestoreRead('getUsersByPartner', path, snapshot.docs.length);
     const raw = snapshot.docs
       .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
       .filter(u => u.partnerId === partnerId || (partnerId === 'partner_ultrafox' && (!u.partnerId || u.partnerId === 'partner_ultrafox') && u.role !== 'super_admin'));

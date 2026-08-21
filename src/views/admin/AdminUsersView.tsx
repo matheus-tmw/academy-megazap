@@ -101,8 +101,17 @@ export const AdminUsersView: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
-    // Real-time Firestore sync listener
+    // Fetch partner list for creation forms
+    listPartners().then(pData => {
+      if (pData) {
+        setPartners(pData);
+        if (pData.length > 0 && !formPartnerId) {
+          setFormPartnerId(pData[0].id);
+        }
+      }
+    }).catch(err => console.warn('Partner load notice:', err));
+
+    // Real-time Firestore sync listener (delivers initial users state + updates without duplicate getDocs)
     const unsubscribeUsers = listenToAllUsers((realtimeUsers) => {
       if (realtimeUsers) {
         setUsers(realtimeUsers);

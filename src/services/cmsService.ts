@@ -16,6 +16,7 @@ import { Track, Module, Lesson, CategoryItem, ContentStatus } from '../types';
 import { TRACKS_DATA } from '../data/coursesData';
 import { logAuditEvent } from './auditService';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { logFirestoreRead, logFirestoreWrite } from '../lib/firestore-logger';
 
 export function slugify(text: string): string {
   return text
@@ -103,6 +104,7 @@ export async function fetchCategoriesFromDb(): Promise<CategoryItem[]> {
   try {
     const catQuery = query(collection(db, 'categories'), orderBy('order', 'asc'));
     const snapshot = await getDocs(catQuery);
+    logFirestoreRead('fetchCategoriesFromDb', 'categories', snapshot.docs.length);
     
     if (snapshot.empty) {
       // Seed default categories if none exist

@@ -2,6 +2,7 @@ import { collection, addDoc, serverTimestamp, query, where, orderBy, getDocs, li
 import { db, auth } from '../lib/firebase';
 import { AuditLogRecord, AuditAction } from '../types/backend';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { logFirestoreRead, logFirestoreWrite } from '../lib/firestore-logger';
 
 export async function logAuditEvent(params: {
   actorUid?: string;
@@ -27,6 +28,7 @@ export async function logAuditEvent(params: {
   };
 
   try {
+    logFirestoreWrite('logAuditEvent', 'auditLogs', 'addDoc');
     await addDoc(collection(db, 'auditLogs'), logData);
   } catch (error) {
     // Non-blocking log catch
@@ -44,6 +46,7 @@ export async function getAuditLogsForPartner(partnerId: string, maxResults = 50)
       limit(maxResults)
     );
     const snapshot = await getDocs(q);
+    logFirestoreRead('getAuditLogsForPartner', path, snapshot.docs.length);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AuditLogRecord));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -59,6 +62,7 @@ export async function getAllAuditLogs(maxResults = 100): Promise<AuditLogRecord[
       limit(maxResults)
     );
     const snapshot = await getDocs(q);
+    logFirestoreRead('getAllAuditLogs', path, snapshot.docs.length);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AuditLogRecord));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);

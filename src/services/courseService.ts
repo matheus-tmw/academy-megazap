@@ -12,6 +12,7 @@ import {
 import { db } from '../lib/firebase';
 import { CourseDocument, ModuleDocument, LessonDocument } from '../types/backend';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { logFirestoreRead, logFirestoreWrite } from '../lib/firestore-logger';
 
 /**
  * Service for Managing MegaZap Academy Courses, Modules & Lessons.
@@ -30,6 +31,7 @@ export async function listPublishedCourses(): Promise<CourseDocument[]> {
       orderBy('order', 'asc')
     );
     const snapshot = await getDocs(q);
+    logFirestoreRead('listPublishedCourses', path, snapshot.docs.length);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as CourseDocument));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -39,6 +41,7 @@ export async function listPublishedCourses(): Promise<CourseDocument[]> {
 export async function getCourse(courseId: string): Promise<CourseDocument | null> {
   const docRef = doc(db, 'courses', courseId);
   try {
+    logFirestoreRead('getCourse', `courses/${courseId}`, 1);
     const snapshot = await getDoc(docRef);
     if (snapshot.exists()) {
       return { id: snapshot.id, ...snapshot.data() } as CourseDocument;

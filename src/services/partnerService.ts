@@ -14,6 +14,12 @@ import { db, auth } from '../lib/firebase';
 import { Partner, PartnerStatus } from '../types/backend';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { logAuditEvent } from './auditService';
+import { 
+  logFirestoreRead, 
+  logFirestoreWrite, 
+  logFirestoreListenerStart, 
+  logFirestoreListenerStop 
+} from '../lib/firestore-logger';
 
 /**
  * Service for Managing White Label Partners.
@@ -64,6 +70,7 @@ export async function createPartner(params: {
 export async function getPartner(partnerId: string): Promise<Partner | null> {
   const docRef = doc(db, 'partners', partnerId);
   try {
+    logFirestoreRead('getPartner', `partners/${partnerId}`, 1);
     const snapshot = await getDoc(docRef);
     if (snapshot.exists()) {
       return { id: snapshot.id, ...snapshot.data() } as Partner;
@@ -82,6 +89,7 @@ export async function getPartner(partnerId: string): Promise<Partner | null> {
 export async function getPartnerByCode(code: string): Promise<Partner | null> {
   const path = 'partners';
   try {
+    logFirestoreRead('getPartnerByCode', path, 1);
     const q = query(collection(db, path), where('code', '==', code.toUpperCase().trim()));
     const snapshot = await getDocs(q);
     if (!snapshot.empty) {
@@ -107,8 +115,10 @@ export function listenToPartners(
   onError?: (error: any) => void
 ): () => void {
   const collRef = collection(db, 'partners');
-  return onSnapshot(collRef, (snapshot) => {
+  logFirestoreListenerStart('listenToPartners', 'partners');
+  const unsubscribe = onSnapshot(collRef, (snapshot) => {
     try {
+      logFirestoreRead('listenToPartners (onSnapshot update)', 'partners', snapshot.docs.length);
       const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Partner));
       list.sort((a, b) => {
         const timeA = a.updatedAt || a.createdAt || '';
@@ -127,12 +137,18 @@ export function listenToPartners(
     console.warn('Real-time partners listener error:', error);
     if (onError) onError(error);
   });
+
+  return () => {
+    logFirestoreListenerStop('listenToPartners', 'partners');
+    unsubscribe();
+  };
 }
 
 export async function listPartners(): Promise<Partner[]> {
   const path = 'partners';
   try {
     const snapshot = await getDocs(collection(db, path));
+    logFirestoreRead('listPartners', path, snapshot.docs.length);
     const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Partner));
     list.sort((a, b) => {
       const timeA = a.updatedAt || a.createdAt || '';

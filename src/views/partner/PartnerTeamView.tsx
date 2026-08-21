@@ -79,9 +79,8 @@ export const PartnerTeamView: React.FC = () => {
   };
 
   useEffect(() => {
-    loadTeam();
-
     if (currentPartner?.id) {
+      // Real-time listener delivers initial team snapshot + updates without double query
       const unsubscribe = listenToPartnerUsers(currentPartner.id, (realtimeTeam) => {
         if (realtimeTeam) {
           setMembers(realtimeTeam);
@@ -92,6 +91,8 @@ export const PartnerTeamView: React.FC = () => {
       return () => {
         unsubscribe();
       };
+    } else {
+      setLoading(false);
     }
   }, [currentPartner?.id]);
 
