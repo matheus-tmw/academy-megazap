@@ -837,7 +837,7 @@ export const AulaPlayerView: React.FC = () => {
                     {currentLesson.resources.map((res) => (
                       <div
                         key={res.id}
-                        className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 hover:border-sky-300 dark:hover:border-sky-600 hover:bg-sky-50/30 dark:hover:bg-sky-950/30 flex items-center justify-between transition-all"
+                        className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-sky-300 dark:hover:border-sky-600 hover:bg-sky-50/30 dark:hover:bg-sky-950/30 flex items-center justify-between transition-all"
                       >
                         <div className="flex items-center gap-3">
                           <div className="p-2 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 border border-sky-100 dark:border-sky-800">
@@ -933,7 +933,7 @@ export const AulaPlayerView: React.FC = () => {
                 </div>
               </button>
             ) : (
-              <div className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-850 border border-slate-100 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500 flex items-center">
+              <div className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500 flex items-center">
                 Primeira aula deste módulo.
               </div>
             )}

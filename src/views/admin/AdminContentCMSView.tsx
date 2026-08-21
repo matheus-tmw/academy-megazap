@@ -2220,31 +2220,20 @@ const LessonEditModal: React.FC<LessonEditModalProps> = ({ lesson, trackId, modu
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Duração (Texto)
+                Nível da Aula
               </label>
-              <input
-                type="text"
-                value={duration}
-                onChange={e => setDuration(e.target.value)}
-                placeholder="ex: 12 min"
+              <select
+                value={level}
+                onChange={e => setLevel(e.target.value as LessonLevel)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Segundos Totais
-              </label>
-              <input
-                type="number"
-                min={30}
-                value={durationSeconds}
-                onChange={e => setDurationSeconds(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
-              />
+              >
+                <option value="Iniciante">Iniciante</option>
+                <option value="Intermediário">Intermediário</option>
+                <option value="Avançado">Avançado</option>
+              </select>
             </div>
 
             <div>

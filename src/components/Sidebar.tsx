@@ -11,6 +11,7 @@ import {
   Sparkles, 
   ShieldCheck, 
   BarChart3, 
+  Star,
   Bookmark, 
   Award, 
   HelpCircle, 
@@ -361,8 +362,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Bookmark className={`w-4 h-4 ${activeTab === 'favoritos' ? 'text-white' : 'text-slate-400 group-hover:text-sky-600'}`} />
-                  <span>Aulas Salvas</span>
+                  <Star className={`w-4 h-4 ${activeTab === 'favoritos' ? 'text-amber-300 fill-amber-300' : 'text-amber-500 fill-amber-500/20 group-hover:text-amber-400'}`} />
+                  <span>Aulas Favoritas</span>
                 </div>
                 {favoriteLessons.length > 0 && (
                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">

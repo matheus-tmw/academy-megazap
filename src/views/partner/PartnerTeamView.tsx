@@ -28,6 +28,8 @@ import { formatDisplayIdentifier } from '../../utils/userIdentifiers';
 import { PasswordResetModal } from '../../components/PasswordResetModal';
 import { UserDetailModal } from '../../components/UserDetailModal';
 import { UserAlreadyExistsModal } from '../../components/UserAlreadyExistsModal';
+import { getUserProgress } from '../../services/progressService';
+import { ALL_LESSONS } from '../../data/coursesData';
 
 export const PartnerTeamView: React.FC = () => {
   const { currentPartner, currentUser } = useAcademy();
@@ -35,6 +37,7 @@ export const PartnerTeamView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [search, setSearch] = useState('');
+  const [userProgressMap, setUserProgressMap] = useState<Record<string, number>>({});
 
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -95,6 +98,41 @@ export const PartnerTeamView: React.FC = () => {
       setLoading(false);
     }
   }, [currentPartner?.id]);
+
+  // Load real progress for team members
+  useEffect(() => {
+    if (!members || members.length === 0) return;
+
+    let isMounted = true;
+    async function loadTeamProgress() {
+      const totalLessons = ALL_LESSONS.length || 1;
+      try {
+        const results = await Promise.all(
+          members.map(async (u) => {
+            try {
+              const prog = await getUserProgress(u.uid);
+              const completedCount = Object.values(prog || {}).filter(p => p.completed).length;
+              const pct = Math.min(100, Math.round((completedCount / totalLessons) * 100));
+              return [u.uid, pct] as [string, number];
+            } catch {
+              return [u.uid, 0] as [string, number];
+            }
+          })
+        );
+        if (isMounted) {
+          setUserProgressMap(Object.fromEntries(results));
+        }
+      } catch {
+        // ignore errors
+      }
+    }
+
+    loadTeamProgress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [members]);
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,12 +320,12 @@ export const PartnerTeamView: React.FC = () => {
                       <span className="text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 font-bold transition-colors">
                         Progresso nas Trilhas →
                       </span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200">{idx === 0 ? '88%' : '60%'}</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{userProgressMap[member.uid] ?? 0}%</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-emerald-500 rounded-full"
-                        style={{ width: `${idx === 0 ? 88 : 60}%` }}
+                        style={{ width: `${userProgressMap[member.uid] ?? 0}%` }}
                       />
                     </div>
                   </div>

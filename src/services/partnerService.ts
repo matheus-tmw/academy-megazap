@@ -34,6 +34,33 @@ export async function createPartner(params: {
 }): Promise<Partner> {
   const { name, displayName, code, status = 'active' } = params;
   const currentUid = auth.currentUser?.uid || 'super_admin';
+
+  // Check for duplicate partner by displayName, name, or code
+  const nameNorm = name.trim().toLowerCase();
+  const displayNameNorm = displayName.trim().toLowerCase();
+  const codeNorm = code.toUpperCase().trim().replace(/[^A-Z0-9_-]/g, '');
+
+  const existingPartners = await listPartners();
+  const duplicate = existingPartners.find(p => {
+    const pNameNorm = (p.name || '').trim().toLowerCase();
+    const pDisplayNameNorm = (p.displayName || '').trim().toLowerCase();
+    const pCodeNorm = (p.code || '').trim().toUpperCase();
+    return (
+      pDisplayNameNorm === displayNameNorm ||
+      pNameNorm === nameNorm ||
+      (codeNorm && pCodeNorm === codeNorm)
+    );
+  });
+
+  if (duplicate) {
+    if ((duplicate.displayName || '').trim().toLowerCase() === displayNameNorm) {
+      throw new Error(`Já existe um parceiro cadastrado com o Nome Fantasia "${displayName.trim()}". Escolha um nome exclusivo.`);
+    }
+    if ((duplicate.name || '').trim().toLowerCase() === nameNorm) {
+      throw new Error(`Já existe um parceiro cadastrado com a Razão Social "${name.trim()}".`);
+    }
+    throw new Error(`Já existe um parceiro cadastrado com o Código "${codeNorm}".`);
+  }
   
   // Create partner with unique document ID
   const partnerRef = doc(collection(db, 'partners'));
@@ -41,7 +68,7 @@ export async function createPartner(params: {
     id: partnerRef.id,
     name: name.trim(),
     displayName: displayName.trim(),
-    code: code.toUpperCase().trim().replace(/[^A-Z0-9_-]/g, ''),
+    code: codeNorm,
     status,
     createdAt: serverTimestamp() as any,
     updatedAt: serverTimestamp() as any,
@@ -170,6 +197,28 @@ export async function listPartners(): Promise<Partner[]> {
 }
 
 export async function updatePartner(partnerId: string, data: Partial<Pick<Partner, 'name' | 'displayName' | 'code' | 'status'>>): Promise<void> {
+  const existingPartners = await listPartners();
+  const otherPartners = existingPartners.filter(p => p.id !== partnerId);
+  
+  if (data.displayName) {
+    const dNorm = data.displayName.trim().toLowerCase();
+    if (otherPartners.some(p => (p.displayName || '').trim().toLowerCase() === dNorm)) {
+      throw new Error(`Já existe outro parceiro cadastrado com o Nome Fantasia "${data.displayName.trim()}".`);
+    }
+  }
+  if (data.name) {
+    const nNorm = data.name.trim().toLowerCase();
+    if (otherPartners.some(p => (p.name || '').trim().toLowerCase() === nNorm)) {
+      throw new Error(`Já existe outro parceiro cadastrado com a Razão Social "${data.name.trim()}".`);
+    }
+  }
+  if (data.code) {
+    const cNorm = data.code.toUpperCase().trim();
+    if (otherPartners.some(p => (p.code || '').trim().toUpperCase() === cNorm)) {
+      throw new Error(`Já existe outro parceiro cadastrado com o Código "${cNorm}".`);
+    }
+  }
+
   const docRef = doc(db, 'partners', partnerId);
   try {
     await updateDoc(docRef, {

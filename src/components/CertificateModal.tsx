@@ -60,7 +60,7 @@ export const CertificateModal: React.FC = () => {
         className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col z-10 animate-in fade-in zoom-in-95 duration-150 my-auto cursor-default"
       >
         {/* Header Actions */}
-        <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-sky-600 dark:text-sky-400" />
             <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">

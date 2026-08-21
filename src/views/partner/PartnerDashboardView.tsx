@@ -16,12 +16,15 @@ import {
 import { getUsersByPartner } from '../../services/userService';
 import { UserProfile } from '../../types/backend';
 import { UserDetailModal } from '../../components/UserDetailModal';
+import { getUserProgress } from '../../services/progressService';
+import { ALL_LESSONS } from '../../data/coursesData';
 
 export const PartnerDashboardView: React.FC = () => {
   const { currentPartner, navigateTo } = useAcademy();
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
+  const [userProgressMap, setUserProgressMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
     async function loadTeam() {
@@ -65,9 +68,49 @@ export const PartnerDashboardView: React.FC = () => {
     loadTeam();
   }, [currentPartner?.id]);
 
-  const totalEmployees = teamMembers.length || 4;
+  // Fetch real progress for team members
+  useEffect(() => {
+    if (!teamMembers || teamMembers.length === 0) return;
+
+    let isMounted = true;
+    async function loadTeamProgress() {
+      const totalLessons = ALL_LESSONS.length || 1;
+      try {
+        const results = await Promise.all(
+          teamMembers.map(async (u) => {
+            try {
+              const prog = await getUserProgress(u.uid);
+              const completedCount = Object.values(prog || {}).filter(p => p.completed).length;
+              const pct = Math.min(100, Math.round((completedCount / totalLessons) * 100));
+              return [u.uid, pct] as [string, number];
+            } catch {
+              return [u.uid, 0] as [string, number];
+            }
+          })
+        );
+        if (isMounted) {
+          setUserProgressMap(Object.fromEntries(results));
+        }
+      } catch {
+        // ignore errors
+      }
+    }
+
+    loadTeamProgress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [teamMembers]);
+
+  const totalEmployees = teamMembers.length || 0;
   const activeEmployees = teamMembers.filter(t => t.status === 'active').length || totalEmployees;
-  const teamAverageProgress = 76;
+  
+  // Calculate average team progress dynamically
+  const progressValues = teamMembers.map(m => userProgressMap[m.uid] ?? 0);
+  const teamAverageProgress = progressValues.length > 0
+    ? Math.round(progressValues.reduce((acc, curr) => acc + curr, 0) / progressValues.length)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -233,11 +276,11 @@ export const PartnerDashboardView: React.FC = () => {
                       <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-emerald-500 rounded-full"
-                          style={{ width: `${idx === 0 ? 92 : 65}%` }}
+                          style={{ width: `${userProgressMap[user.uid] ?? 0}%` }}
                         />
                       </div>
                       <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                        {idx === 0 ? '92%' : '65%'}
+                        {userProgressMap[user.uid] ?? 0}%
                       </span>
                     </div>
                   </td>

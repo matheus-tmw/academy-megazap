@@ -133,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
       'meus-treinamentos': 'Meus Treinamentos',
       'catalogo': 'Catálogo de Trilhas',
       'meu-progresso': 'Meu Progresso',
-      'favoritos': 'Aulas Salvas',
+      'favoritos': 'Aulas Favoritas',
       'certificados': 'Meus Certificados',
       'central-ajuda': 'Central de Ajuda e Suporte',
       'admin-dashboard': 'Painel Geral Super Admin',

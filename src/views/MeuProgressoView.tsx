@@ -131,7 +131,7 @@ export const MeuProgressoView: React.FC = () => {
               <div 
                 key={track.id}
                 id={`progress-track-row-${track.id}`}
-                className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-850 hover:bg-slate-50/90 dark:hover:bg-slate-800/80 shadow-2xs hover:shadow-xs transition-all"
+                className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 hover:bg-slate-50/90 dark:hover:bg-slate-800/80 shadow-2xs hover:shadow-xs transition-all"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-3">
