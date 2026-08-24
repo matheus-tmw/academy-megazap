@@ -443,22 +443,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                 </div>
               )}
 
-              {isRealPartnerAdmin && !isRealSuperAdmin && (
-                <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                    Alternar Visão:
-                  </div>
-                  <div className="grid grid-cols-2 gap-1 text-[10px]">
-                    <button
-                      onClick={() => { switchDemoRole('partner_admin'); setIsUserMenuOpen(false); }}
-                      className={`p-1 rounded text-center border font-medium ${activeRole === 'partner_admin' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600'}`}
-                    >
-                      Painel Empresa
-                    </button>
-                  </div>
-                </div>
-              )}
-
               <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
                 <button
                   onClick={() => {
