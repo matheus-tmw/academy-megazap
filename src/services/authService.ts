@@ -8,7 +8,9 @@ import {
   onAuthStateChanged, 
   User as FirebaseUser,
   updateProfile,
-  updatePassword
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider
 } from 'firebase/auth';
 import { 
   collection,
@@ -414,7 +416,7 @@ export function subscribeToAuthState(callback: (user: FirebaseUser | null) => vo
 /**
  * Updates the user's password in Firebase Auth and clears the mustChangePassword flag in Firestore.
  */
-export async function updateUserPasswordOnFirstLogin(newPassword: string): Promise<void> {
+export async function updateUserPasswordOnFirstLogin(newPassword: string, currentPassword?: string): Promise<void> {
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error('Nenhum usuário autenticado para atualizar a senha.');
@@ -424,8 +426,20 @@ export async function updateUserPasswordOnFirstLogin(newPassword: string): Promi
     throw new Error('A nova senha deve possuir no mínimo 6 caracteres.');
   }
 
-  // Update password in Firebase Authentication
-  await updatePassword(currentUser, newPassword);
+  try {
+    // Update password in Firebase Authentication
+    await updatePassword(currentUser, newPassword);
+  } catch (err: any) {
+    if (err.code === 'auth/requires-recent-login' && currentPassword && currentUser.email) {
+      // Reauthenticate
+      const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+      await reauthenticateWithCredential(currentUser, credential);
+      // Try again
+      await updatePassword(currentUser, newPassword);
+    } else {
+      throw err;
+    }
+  }
 
   // Clear mustChangePassword and tempPassword in Firestore
   const userDocRef = doc(db, 'users', currentUser.uid);

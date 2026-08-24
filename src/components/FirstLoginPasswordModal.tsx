@@ -11,6 +11,7 @@ interface FirstLoginPasswordModalProps {
 
 export const FirstLoginPasswordModal: React.FC<FirstLoginPasswordModalProps> = ({ isOpen, onSuccess }) => {
   const { currentUser, updateCurrentUserProfile } = useAcademy();
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,7 +42,7 @@ export const FirstLoginPasswordModal: React.FC<FirstLoginPasswordModalProps> = (
 
     setLoading(true);
     try {
-      await updateUserPasswordOnFirstLogin(newPassword);
+      await updateUserPasswordOnFirstLogin(newPassword, oldPassword);
       setSuccess(true);
       
       try {
@@ -56,7 +57,11 @@ export const FirstLoginPasswordModal: React.FC<FirstLoginPasswordModalProps> = (
         onSuccess();
       }, 1800);
     } catch (err: any) {
-      setError(err?.message || 'Erro ao cadastrar nova senha. Tente novamente.');
+      if (err.code === 'auth/wrong-password') {
+        setError('A senha atual informada está incorreta.');
+      } else {
+        setError(err?.message || 'Erro ao cadastrar nova senha. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
@@ -118,6 +123,20 @@ export const FirstLoginPasswordModal: React.FC<FirstLoginPasswordModalProps> = (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Senha Atual (Temporária)
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={oldPassword}
+                  onChange={e => setOldPassword(e.target.value)}
+                  placeholder="Digite sua senha atual"
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Nova Senha Pessoal
                 </label>
                 <div className="relative">
@@ -168,7 +187,7 @@ export const FirstLoginPasswordModal: React.FC<FirstLoginPasswordModalProps> = (
 
               <button
                 type="submit"
-                disabled={loading || !newPassword || !confirmPassword}
+                disabled={loading || !newPassword || !confirmPassword || !oldPassword}
                 className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {loading ? (
