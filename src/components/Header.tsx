@@ -242,22 +242,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </div>
         )}
 
-        {/* Quick Role Switcher Pill (Partner Admin) */}
-        {isRealPartnerAdmin && !isRealSuperAdmin && (
-          <div className="flex items-center bg-emerald-50 dark:bg-emerald-900/30 p-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800 text-[10px]">
-            <button
-              onClick={() => switchDemoRole('partner_admin')}
-              className={`px-2 py-0.5 rounded-md font-medium transition-all ${
-                activeRole === 'partner_admin'
-                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
-                  : 'text-emerald-700 dark:text-emerald-300'
-              }`}
-              title="Painel da Empresa"
-            >
-              🏢 Painel Empresa
-            </button>
-          </div>
-        )}
 
         {/* Theme Toggle */}
         <button
