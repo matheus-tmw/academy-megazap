@@ -185,7 +185,22 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
         {renderBreadcrumb()}
       </div>
 
-      {/* Right side: Global Search, Quick Persona Switcher, Notifications, Theme, User Profile */}
+      {/* Center: Global Search */}
+      <div className="flex-1 flex justify-center px-4">
+        <button
+          type="button"
+          onClick={() => setIsSearchModalOpen(true)}
+          className="flex items-center gap-3 px-4 py-2 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl transition-all cursor-pointer shadow-xs w-full max-w-md"
+        >
+          <Search className="w-4 h-4" />
+          <span>Buscar cursos, certificados...</span>
+          <kbd className="hidden sm:inline-flex ml-auto px-1.5 py-0.5 text-[10px] font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded">
+            ⌘K
+          </kbd>
+        </button>
+      </div>
+
+      {/* Right side: Role Switcher, Notifications, Theme, User Profile */}
       <div className="flex items-center gap-1.5 sm:gap-2.5">
         
         {/* Quick Role Switcher Pill (Master Admin) */}
@@ -243,19 +258,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             </button>
           </div>
         )}
-
-        {/* Global Search Button - Centralized and Larger */}
-        <button
-          type="button"
-          onClick={() => setIsSearchModalOpen(true)}
-          className="flex-1 flex items-center gap-3 px-4 py-2 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl transition-all cursor-pointer shadow-xs max-w-lg mx-auto"
-        >
-          <Search className="w-4 h-4" />
-          <span>Buscar cursos, certificados...</span>
-          <kbd className="hidden sm:inline-flex ml-auto px-1.5 py-0.5 text-[10px] font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded">
-            ⌘K
-          </kbd>
-        </button>
 
         {/* Theme Toggle */}
         <button
