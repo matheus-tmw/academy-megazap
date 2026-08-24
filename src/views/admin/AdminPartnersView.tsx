@@ -21,6 +21,7 @@ import { listPartners, listenToPartners, createPartner, updatePartner, updatePar
 import { getUsersByPartner } from '../../services/userService';
 import { Partner, PartnerStatus, UserProfile } from '../../types/backend';
 import { UserDetailModal } from '../../components/UserDetailModal';
+import { safeBackdropProps } from '../../utils/modalUtils';
 
 export const AdminPartnersView: React.FC = () => {
   const { navigateTo } = useAcademy();
@@ -340,7 +341,7 @@ export const AdminPartnersView: React.FC = () => {
       {/* Modal: Create Partner */}
       {createModalOpen && (
         <div 
-          onClick={(e) => { if (e.target === e.currentTarget) setCreateModalOpen(false); }}
+          {...safeBackdropProps(() => setCreateModalOpen(false))}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
         >
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">
@@ -442,7 +443,7 @@ export const AdminPartnersView: React.FC = () => {
       {/* Modal: Edit Partner */}
       {editModalOpen && selectedPartner && (
         <div 
-          onClick={(e) => { if (e.target === e.currentTarget) setEditModalOpen(false); }}
+          {...safeBackdropProps(() => setEditModalOpen(false))}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
         >
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">
@@ -540,7 +541,7 @@ export const AdminPartnersView: React.FC = () => {
       {/* Modal: Partner Detail */}
       {detailModalOpen && selectedPartner && (
         <div 
-          onClick={(e) => { if (e.target === e.currentTarget) setDetailModalOpen(false); }}
+          {...safeBackdropProps(() => setDetailModalOpen(false))}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
         >
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl cursor-default">

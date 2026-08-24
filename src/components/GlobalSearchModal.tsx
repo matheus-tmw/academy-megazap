@@ -19,6 +19,7 @@ import {
 import { useAcademy } from '../context/AcademyContext';
 import { ALL_LESSONS, TRACKS_DATA } from '../data/coursesData';
 import { Lesson, Track } from '../types';
+import { safeBackdropProps } from '../utils/modalUtils';
 
 export const GlobalSearchModal: React.FC = () => {
   const { 
@@ -100,19 +101,9 @@ export const GlobalSearchModal: React.FC = () => {
 
   return (
     <div 
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          setIsSearchModalOpen(false);
-        }
-      }}
-      className="fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-20 px-4 cursor-pointer"
+      {...safeBackdropProps(() => setIsSearchModalOpen(false))}
+      className="fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-20 px-4 bg-slate-900/50 backdrop-blur-xs cursor-pointer"
     >
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
-        onClick={() => setIsSearchModalOpen(false)}
-      />
-
       {/* Modal Card */}
       <div 
         onClick={(e) => e.stopPropagation()}

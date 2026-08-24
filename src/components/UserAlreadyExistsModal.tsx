@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserX, AlertCircle, X, ShieldAlert } from 'lucide-react';
+import { safeBackdropProps } from '../utils/modalUtils';
 
 interface UserAlreadyExistsModalProps {
   isOpen: boolean;
@@ -18,11 +19,7 @@ export const UserAlreadyExistsModal: React.FC<UserAlreadyExistsModalProps> = ({
 
   return (
     <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
+      {...safeBackdropProps(onClose)}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 cursor-pointer"
     >
       <div

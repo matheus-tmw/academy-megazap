@@ -26,6 +26,7 @@ import { getUserProgress } from '../services/progressService';
 import { getUserCertificates } from '../services/certificateService';
 import { getPartner } from '../services/partnerService';
 import { formatDisplayIdentifier } from '../utils/userIdentifiers';
+import { safeBackdropProps } from '../utils/modalUtils';
 import { useAcademy } from '../context/AcademyContext';
 
 interface UserDetailModalProps {
@@ -117,11 +118,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
   return (
     <div 
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
+      {...safeBackdropProps(onClose)}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200 cursor-pointer"
     >
       <div 

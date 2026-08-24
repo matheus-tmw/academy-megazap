@@ -3,6 +3,7 @@ import { KeyRound, CheckCircle2, Copy, Check, MessageSquare, AlertCircle, Sparkl
 import { UserProfile } from '../types/backend';
 import { generateAndResetUserTemporaryPassword } from '../services/userService';
 import { formatDisplayIdentifier } from '../utils/userIdentifiers';
+import { safeBackdropProps } from '../utils/modalUtils';
 import { useAcademy } from '../context/AcademyContext';
 
 interface PasswordResetModalProps {
@@ -71,11 +72,7 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
 
   return (
     <div 
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleClose();
-        }
-      }}
+      {...safeBackdropProps(handleClose)}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in cursor-pointer"
     >
       <div 

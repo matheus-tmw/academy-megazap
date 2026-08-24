@@ -54,6 +54,7 @@ import {
   Archive,
   ArrowRight
 } from 'lucide-react';
+import { safeBackdropProps } from '../../utils/modalUtils';
 import { 
   createCategory, 
   updateCategory, 
@@ -1573,7 +1574,7 @@ export const AdminContentCMSView: React.FC = () => {
       {/* ============================================================== */}
       {deleteConfirmModal.open && (
         <div 
-          onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirmModal({ open: false, type: null, id: null, title: '' }); }}
+          {...safeBackdropProps(() => setDeleteConfirmModal({ open: false, type: null, id: null, title: '' }))}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
         >
           <div onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 cursor-default">
@@ -1648,7 +1649,7 @@ const CategoryEditModal: React.FC<CategoryEditModalProps> = ({ category, onClose
 
   return (
     <div 
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      {...safeBackdropProps(onClose)}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
     >
       <div onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 cursor-default">
@@ -1830,7 +1831,7 @@ const TrackEditModal: React.FC<TrackEditModalProps> = ({ track, categories, onCl
 
   return (
     <div 
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      {...safeBackdropProps(onClose)}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto cursor-pointer"
     >
       <div onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 my-8 cursor-default">
@@ -2042,7 +2043,7 @@ const ModuleEditModal: React.FC<ModuleEditModalProps> = ({ module, trackId, onCl
 
   return (
     <div 
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      {...safeBackdropProps(onClose)}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
     >
       <div onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 cursor-default">
@@ -2192,7 +2193,7 @@ const LessonEditModal: React.FC<LessonEditModalProps> = ({ lesson, trackId, modu
 
   return (
     <div 
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      {...safeBackdropProps(onClose)}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto cursor-pointer"
     >
       <div onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 my-8 cursor-default">

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAcademy } from '../context/AcademyContext';
 import { MegaZapLogo } from './MegaZapLogo';
+import { safeBackdropProps } from '../utils/modalUtils';
 
 export const CertificateModal: React.FC = () => {
   const { 
@@ -41,11 +42,7 @@ export const CertificateModal: React.FC = () => {
 
   return (
     <div 
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          setIsCertificateModalOpen(false);
-        }
-      }}
+      {...safeBackdropProps(() => setIsCertificateModalOpen(false))}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto cursor-pointer"
     >
       {/* Backdrop */}
