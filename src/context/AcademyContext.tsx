@@ -706,6 +706,8 @@ export const AcademyProvider: React.FC<{ children: ReactNode }> = ({ children })
     localStorage.removeItem(STORAGE_KEYS.PROGRESS);
     localStorage.removeItem(STORAGE_KEYS.FAVORITES);
     localStorage.removeItem(STORAGE_KEYS.NOTES);
+    localStorage.removeItem(STORAGE_KEYS.THEME); // Reset theme persistence
+    setThemeState('light'); // Reset theme state to light
     setCompletedLessons([]);
     setLessonProgress({});
     setFavoriteLessons([]);
